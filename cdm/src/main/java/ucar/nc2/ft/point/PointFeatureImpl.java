@@ -72,6 +72,11 @@ public abstract class PointFeatureImpl implements PointFeature, Comparable<Point
   @Override
   public double getObservationTime() { return obsTime; }
 
+  // TODO: Should this method be added to PointFeature?
+  public DateUnit getTimeUnit() {
+    return timeUnit;
+  }
+
   public String getDescription() {
     return location.toString(); // ??
   }
