@@ -33,6 +33,8 @@
 
 package ucar.httpservices;
 
+import net.jcip.annotations.NotThreadSafe;
+
 import org.apache.http.*;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
@@ -103,7 +105,8 @@ import static ucar.httpservices.HTTPAuthScope.*;
  * constructions must specify a url.
  */
 
-public class HTTPSession
+@NotThreadSafe
+public class HTTPSession implements AutoCloseable
 {
     //////////////////////////////////////////////////
     // Constants
@@ -185,11 +188,13 @@ public class HTTPSession
                      int executionCount,
                      HttpContext context)
         {
-            if(verbose) {
+            if(getVerbose()) {
                 HTTPSession.log.debug(String.format("Retry: count=%d exception=%s", executionCount, exception.toString()));
             }
-            if(executionCount >= retries)
-                return false;
+            synchronized (RetryHandler.class) {
+                if(executionCount >= retries)
+                    return false;
+            }
             if((exception instanceof InterruptedIOException) // Timeout
                 || (exception instanceof UnknownHostException)
                 || (exception instanceof ConnectException) // connection refused
@@ -211,8 +216,7 @@ public class HTTPSession
 
         static public synchronized void setRetries(int retries)
         {
-            if(retries > 0)
-                RetryHandler.retries = retries;
+            RetryHandler.retries = retries;
         }
 
         static public synchronized boolean getVerbose()
@@ -509,28 +513,30 @@ public class HTTPSession
     static public String
     getUrlAsString(String url) throws HTTPException
     {
-        HTTPSession session = HTTPFactory.newSession(url);
-        HTTPMethod m = HTTPFactory.Get(session);
-        int status = m.execute();
-        String content = null;
-        if(status == 200) {
-            content = m.getResponseAsString();
+        try (
+            HTTPSession session = HTTPFactory.newSession(url);
+            HTTPMethod m = HTTPFactory.Get(session);) {
+            int status = m.execute();
+            String content = null;
+            if(status == 200) {
+                content = m.getResponseAsString();
+            }
+            return content;
         }
-        m.close();
-        return content;
     }
 
     static public int
     putUrlAsString(String content, String url) throws HTTPException
     {
-        HTTPMethod m = HTTPFactory.Put(url);
+        int status = 0;
         try {
-            m.setRequestContent(new StringEntity(content, "application/text", "UTF-8"));
+            try (HTTPMethod m = HTTPFactory.Put(url);) {
+                m.setRequestContent(new StringEntity(content, "application/text", "UTF-8"));
+                status = m.execute();
+            }
         } catch (UnsupportedEncodingException uee) {
             throw new HTTPException(uee);
         }
-        int status = m.execute();
-        m.close();
         return status;
     }
 
@@ -651,7 +657,9 @@ public class HTTPSession
         }
         this.legalurl = url;
         try {
-            sessionClient = new DefaultHttpClient(connmgr);
+            synchronized (HTTPSession.class) {
+                sessionClient = new DefaultHttpClient(connmgr);
+            }
             if(TESTING) HTTPSession.track(this);
             setInterceptors();
         } catch (Exception e) {
@@ -760,7 +768,7 @@ public class HTTPSession
 
     synchronized public void close()
     {
-        if(closed)
+        if(this.closed)
             return; // multiple calls ok
         while(methodList.size() > 0) {
             HTTPMethod m = methodList.get(0);
@@ -873,20 +881,6 @@ public class HTTPSession
         }
     }
 
-    //////////////////////////////////////////////////
-    // Testing support
-
-    // Expose the state for testing purposes
-    public boolean isClosed()
-    {
-        return this.closed;
-    }
-
-    public int getMethodcount()
-    {
-        return methodList.size();
-    }
-
     // This provides support for HTTPMethod.setAuthentication method
     synchronized protected void
     setAuthentication(HTTPCachingProvider hap)
@@ -903,6 +897,20 @@ public class HTTPSession
     {
         HttpResponse response = sessionClient.execute(request, this.execcontext);
         return response;
+    }
+
+    //////////////////////////////////////////////////
+    // Testing support
+
+    // Expose the state for testing purposes
+    synchronized public boolean isClosed()
+    {
+        return this.closed;
+    }
+
+    synchronized public int getMethodcount()
+    {
+        return methodList.size();
     }
 
     //////////////////////////////////////////////////
@@ -940,19 +948,19 @@ public class HTTPSession
         sessionList.add(session);
     }
 
-    static public void debugHeaders(boolean print)
+    static synchronized public void debugHeaders(boolean print)
     {
         HTTPUtil.InterceptRequest rq = new HTTPUtil.InterceptRequest();
         HTTPUtil.InterceptResponse rs = new HTTPUtil.InterceptResponse();
         rq.setPrint(print);
         rs.setPrint(print);
         /* remove any previous */
-        for(int i=reqintercepts.size()-1;i>=0;i++) {
+        for(int i = reqintercepts.size() - 1;i >= 0;i--) {
             HttpRequestInterceptor hr = reqintercepts.get(i);
             if(hr instanceof HTTPUtil.InterceptCommon)
                 reqintercepts.remove(i);
         }
-        for(int i=rspintercepts.size()-1;i>=0;i--) {
+        for(int i = rspintercepts.size() - 1;i >= 0;i--) {
             HttpResponseInterceptor hr = rspintercepts.get(i);
             if(hr instanceof HTTPUtil.InterceptCommon)
                 rspintercepts.remove(i);

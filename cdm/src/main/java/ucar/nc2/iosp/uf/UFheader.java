@@ -46,7 +46,6 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class UFheader {
-  ucar.unidata.io.RandomAccessFile raf;
   static final boolean littleEndianData = true;
   String dataFormat = "UNIVERSALFORMAT";  // temp setting
   Ray firstRay = null;
@@ -57,10 +56,10 @@ public class UFheader {
 
   public boolean isValidFile(ucar.unidata.io.RandomAccessFile raf) {
     try {
-      raf.seek(0);
       raf.order(RandomAccessFile.BIG_ENDIAN);
 
-      String ufStr = raf.readString(6);
+      raf.seek(4);
+      String ufStr = raf.readString(2);
       if (!ufStr.equals("UF"))
         return false;
       //if ufStr is UF, then a further checking apply
@@ -88,7 +87,6 @@ public class UFheader {
   }
 
   void read(ucar.unidata.io.RandomAccessFile raf) throws IOException {
-    this.raf = raf;
     Map<String, List<Ray>> rayListMap = new HashMap<>(600);  // all the rays for a variable
 
     raf.seek(0);

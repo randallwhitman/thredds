@@ -38,6 +38,7 @@ import ucar.nc2.time.CalendarDate;
 import ucar.unidata.io.RandomAccessFile;
 
 import java.io.IOException;
+import java.util.Formatter;
 
 /**
  * A Grib1 message.
@@ -155,6 +156,29 @@ public class Grib1Record {
     }
 
     return data;
+  }
+
+  public void showDataInfo(RandomAccessFile raf, Formatter f) throws IOException {
+    Grib1Gds gds = gdss.getGDS();
+    f.format(" decimal scale = %d%n", pdss.getDecimalScale());
+    f.format("     scan mode = %d%n", gds.getScanMode());
+    f.format("            nx = %d%n", gds.getNx());
+    f.format("            ny = %d%n", gds.getNy());
+    f.format("          Npts = %d%n", gds.getNpts());
+    f.format("        isThin = %s%n", gdss.isThin());
+
+    Grib1SectionBinaryData.BinaryDataInfo info = dataSection.getBinaryDataInfo(raf);
+    f.format("   msgLength = %d%n", info.msgLength);
+
+    // octet 4, 1st half (packing flag)
+    f.format("    ----flag = %s%n", Long.toHexString(info.flag));
+    f.format("        data = %s%n", info.getGridPointS());
+    f.format("     packing = %s%n", info.getPackingS());
+    f.format("        type = %s%n", info.getDataTypeS());
+    f.format("        more = %s%n", info.hasMore());
+    f.format("scale factor = %d%n", info.binscale);
+    f.format("reference value = %f%n", info.refvalue);
+    f.format("      nbits = %d%n", info.numbits);
   }
 
   /**

@@ -50,6 +50,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.labels.StandardXYToolTipGenerator;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
+import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
@@ -104,8 +105,10 @@ public class VariablePlot extends JPanel {
     plot.setDomainGridlinesVisible(true);
     plot.setRangeGridlinePaint(Color.GRAY);
     plot.setAxisOffset(RectangleInsets.ZERO_INSETS);
-    chart.getLegend().setPosition(RectangleEdge.RIGHT);
-
+    LegendTitle legend = chart.getLegend();
+    if (legend != null) {
+      legend.setPosition(RectangleEdge.RIGHT);
+    }
     add(chartPanel);
   }
 

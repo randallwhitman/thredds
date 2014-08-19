@@ -46,7 +46,6 @@ import java.util.StringTokenizer;
  * @author John Caron
  */
 public class LatLonRect {
-
   /**
    * Inverse of LatLon.toString().
    * @param s "ll: 63.45S 180.0W+ ur: 74.65N 180.0E"
@@ -64,6 +63,7 @@ public class LatLonRect {
     init(new LatLonPointImpl(lat, lon), deltaLat, deltaLon);
   } */
 
+  public static LatLonRect INVALID = new LatLonRect(LatLonPointImmutable.INVALID, LatLonPointImmutable.INVALID);
 
   /**
    * upper right corner
@@ -228,7 +228,7 @@ public class LatLonRect {
   }
 
   /**
-   * get whether two bounding boxes are equal in values
+   * determine whether two bounding boxes are equal in values
    *
    * @param other other bounding box
    * @return true if this represents the same bounding box as other
@@ -236,6 +236,20 @@ public class LatLonRect {
   public boolean equals(LatLonRect other) {
     return lowerLeft.equals(other.getLowerLeftPoint())
         && upperRight.equals(other.getUpperRightPoint());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    return equals((LatLonRect) o);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = upperRight.hashCode();
+    result = 31 * result + lowerLeft.hashCode();
+    return result;
   }
 
   /**

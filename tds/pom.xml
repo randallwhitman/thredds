@@ -5,7 +5,7 @@
   <parent>
     <groupId>edu.ucar</groupId>
     <artifactId>thredds-parent</artifactId>
-    <version>4.5.2-SNAPSHOT</version>
+    <version>4.5.3-SNAPSHOT</version>
   </parent>
 
 
@@ -375,7 +375,6 @@
         <configuration>
           <!-- Enabling tests for first unit testing -->
           <skip>${skipTests}</skip>
-          <testFailureIgnore>true</testFailureIgnore>
           <excludes>
             <exclude>/thredds/tds/**</exclude>
           </excludes>

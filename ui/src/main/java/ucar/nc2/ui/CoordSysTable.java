@@ -1,34 +1,34 @@
 /*
- * Copyright 1998-2009 University Corporation for Atmospheric Research/Unidata
+ * Copyright 1998-2014 University Corporation for Atmospheric Research/Unidata
  *
- * Portions of this software were developed by the Unidata Program at the
- * University Corporation for Atmospheric Research.
+ *   Portions of this software were developed by the Unidata Program at the
+ *   University Corporation for Atmospheric Research.
  *
- * Access and use of this software shall impose the following obligations
- * and understandings on the user. The user is granted the right, without
- * any fee or cost, to use, copy, modify, alter, enhance and distribute
- * this software, and any derivative works thereof, and its supporting
- * documentation for any purpose whatsoever, provided that this entire
- * notice appears in all copies of the software, derivative works and
- * supporting documentation.  Further, UCAR requests that the user credit
- * UCAR/Unidata in any publications that result from the use of this
- * software or in any product that includes this software. The names UCAR
- * and/or Unidata, however, may not be used in any advertising or publicity
- * to endorse or promote any products or commercial entity unless specific
- * written permission is obtained from UCAR/Unidata. The user also
- * understands that UCAR/Unidata is not obligated to provide the user with
- * any support, consulting, training or assistance of any kind with regard
- * to the use, operation and performance of this software nor to provide
- * the user with any updates, revisions, new versions or "bug fixes."
+ *   Access and use of this software shall impose the following obligations
+ *   and understandings on the user. The user is granted the right, without
+ *   any fee or cost, to use, copy, modify, alter, enhance and distribute
+ *   this software, and any derivative works thereof, and its supporting
+ *   documentation for any purpose whatsoever, provided that this entire
+ *   notice appears in all copies of the software, derivative works and
+ *   supporting documentation.  Further, UCAR requests that the user credit
+ *   UCAR/Unidata in any publications that result from the use of this
+ *   software or in any product that includes this software. The names UCAR
+ *   and/or Unidata, however, may not be used in any advertising or publicity
+ *   to endorse or promote any products or commercial entity unless specific
+ *   written permission is obtained from UCAR/Unidata. The user also
+ *   understands that UCAR/Unidata is not obligated to provide the user with
+ *   any support, consulting, training or assistance of any kind with regard
+ *   to the use, operation and performance of this software nor to provide
+ *   the user with any updates, revisions, new versions or "bug fixes."
  *
- * THIS SOFTWARE IS PROVIDED BY UCAR/UNIDATA "AS IS" AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL UCAR/UNIDATA BE LIABLE FOR ANY SPECIAL,
- * INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING
- * FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
- * WITH THE ACCESS, USE OR PERFORMANCE OF THIS SOFTWARE.
+ *   THIS SOFTWARE IS PROVIDED BY UCAR/UNIDATA "AS IS" AND ANY EXPRESS OR
+ *   IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *   DISCLAIMED. IN NO EVENT SHALL UCAR/UNIDATA BE LIABLE FOR ANY SPECIAL,
+ *   INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING
+ *   FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+ *   NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+ *   WITH THE ACCESS, USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
 package ucar.nc2.ui;
@@ -251,7 +251,7 @@ public class CoordSysTable extends JPanel {
       attWindow.setBounds( (Rectangle) prefs.getBean("AttWindowBounds", new Rectangle( 300, 100, 500, 800)));
     }
 
-    List<AttributeBean> attlist = new ArrayList<AttributeBean>();
+    List<AttributeBean> attlist = new ArrayList<>();
     for (Attribute att : ds.getGlobalAttributes()) {
       attlist.add(new AttributeBean(att));
     }
@@ -307,6 +307,10 @@ public class CoordSysTable extends JPanel {
     if (axis2D.isInterval()) {
       ArrayDouble.D2 coords = axis2D.getCoordValuesArray();
       ArrayDouble.D3 bounds = axis2D.getCoordBoundsArray();
+      if (bounds == null) {
+        infoTA.appendLine("No bounds for interval " + axis2D.getFullName());
+        return;
+      }
 
       IndexIterator coordIter = coords.getIndexIterator();
       IndexIterator boundsIter = bounds.getIndexIterator();
@@ -431,6 +435,10 @@ public class CoordSysTable extends JPanel {
     if (axis2D.isInterval()) {
       ArrayDouble.D2 coords = axis2D.getCoordValuesArray();
       ArrayDouble.D3 bounds = axis2D.getCoordBoundsArray();
+      if (bounds == null) {
+        infoTA.appendLine("No bounds for interval " + axis2D.getFullName());
+        return;
+      }
 
       IndexIterator coordIter = coords.getIndexIterator();
       IndexIterator boundsIter = bounds.getIndexIterator();
@@ -454,7 +462,6 @@ public class CoordSysTable extends JPanel {
       }
 
     }
-
 
     infoTA.appendLine(f.toString());
   }
@@ -488,8 +495,8 @@ public class CoordSysTable extends JPanel {
   private void printArray(String title, double vals[]) {
     StringBuilder sbuff = new StringBuilder();
     sbuff.append(" ").append(title);
-    for (int i = 0; i < vals.length; i++) {
-      sbuff.append(" ").append(vals[i]);
+    for (double val : vals) {
+      sbuff.append(" ").append(val);
     }
     sbuff.append("\n");
     infoTA.appendLine(sbuff.toString());
@@ -521,8 +528,8 @@ public class CoordSysTable extends JPanel {
     this.ds = ds;
     parseInfo = new Formatter();
 
-    List<VariableBean> beanList = new ArrayList<VariableBean>();
-    List<AxisBean> axisList = new ArrayList<AxisBean>();
+    List<VariableBean> beanList = new ArrayList<>();
+    List<AxisBean> axisList = new ArrayList<>();
     setVariables(ds.getVariables(), axisList, beanList);
 
     varTable.setBeans(beanList);
@@ -531,25 +538,23 @@ public class CoordSysTable extends JPanel {
   }
 
   private void setVariables(List<Variable> varList, List<AxisBean> axisList, List<VariableBean> beanList) {
-    for (int i = 0; i < varList.size(); i++) {
-      VariableEnhanced v = (VariableEnhanced) varList.get(i);
+    for (Variable aVarList : varList) {
+      VariableEnhanced v = (VariableEnhanced) aVarList;
       if (v instanceof CoordinateAxis)
         axisList.add(new AxisBean((CoordinateAxis) v));
       else
         beanList.add(new VariableBean(v));
 
       if (v instanceof Structure) {
-        java.util.List<Variable> nested = ((Structure) v).getVariables();
+        List<Variable> nested = ((Structure) v).getVariables();
         setVariables(nested, axisList, beanList);
       }
     }
   }
 
   public List<CoordinateSystemBean> getCoordinateSystemBeans(NetcdfDataset ds) {
-    List<CoordinateSystemBean> vlist = new ArrayList<CoordinateSystemBean>();
-    java.util.List<CoordinateSystem> list = ds.getCoordinateSystems();
-    for (int i = 0; i < list.size(); i++) {
-      CoordinateSystem elem = list.get(i);
+    List<CoordinateSystemBean> vlist = new ArrayList<>();
+    for (CoordinateSystem elem : ds.getCoordinateSystems()) {
       vlist.add(new CoordinateSystemBean(elem));
     }
     return vlist;
@@ -557,8 +562,8 @@ public class CoordSysTable extends JPanel {
 
   private void setSelectedCoordinateSystem(CoordinateSystem coordSys) {
     List beans = csTable.getBeans();
-    for (int i = 0; i < beans.size(); i++) {
-      CoordinateSystemBean bean = (CoordinateSystemBean) beans.get(i);
+    for (Object bean1 : beans) {
+      CoordinateSystemBean bean = (CoordinateSystemBean) bean1;
       if (bean.coordSys == coordSys) {
         csTable.setSelectedBean(bean);
         return;
@@ -572,8 +577,8 @@ public class CoordSysTable extends JPanel {
     CoordinateAxis axis = (CoordinateAxis) axesList.get(0);
 
     List beans = axisTable.getBeans();
-    for (int i = 0; i < beans.size(); i++) {
-      AxisBean bean = (AxisBean) beans.get(i);
+    for (Object bean1 : beans) {
+      AxisBean bean = (AxisBean) bean1;
       if (bean.axis == axis) {
         axisTable.setSelectedBean(bean);
         return;
@@ -616,9 +621,8 @@ public class CoordSysTable extends JPanel {
 
     VariableEnhanced ve;
     CoordinateSystem firstCoordSys = null;
-    String name, desc, units, axisType = "", positive = "";
+    String name, desc, units;
     String dims, shape, csNames, dataType = "";
-    boolean isCoordVar, axis;
 
     // no-arg constructor
 

@@ -34,7 +34,6 @@ package ucar.nc2.iosp.noaa;
 
 import ucar.ma2.*;
 import ucar.nc2.*;
-import ucar.nc2.constants.CDM;
 import ucar.nc2.iosp.AbstractIOServiceProvider;
 import ucar.nc2.ncml.NcmlConstructor;
 import ucar.nc2.util.CancelTask;
@@ -99,20 +98,16 @@ public class IgraPor extends AbstractIOServiceProvider {
       if (!datFile.exists())
         return false;
       File stnFile = getStnFile(location);
-      if (!stnFile.exists())
+      if (stnFile == null || !stnFile.exists())
         return false;
 
       raf.seek(0);
-      byte[] b = new byte[MAGIC_START_IDX.length()];
-      raf.read(b);
-      String test = new String(b, CDM.utf8Charset);
+      String test = raf.readString(MAGIC_START_IDX.length());
       return test.equals(MAGIC_START_IDX);
 
     } else if (ext.equals(DAT_EXT)) {
       File stnFile = getStnFile(location);
-      if (stnFile == null)
-        return false;
-      return isValidFile(raf, dataHeaderPattern);
+      return stnFile != null && isValidFile(raf, dataHeaderPattern);
 
     } else {
       // data directory must exist
@@ -178,6 +173,8 @@ public class IgraPor extends AbstractIOServiceProvider {
 
     File file = new File(location);
     File stnFile = getStnFile(location);
+    if (stnFile == null)
+      throw new FileNotFoundException("Station File does not exist="+location);
 
     if (ext.equals(IDX_EXT)) {
       stnRaf = new RandomAccessFile(stnFile.getPath(), "r");
@@ -406,7 +403,6 @@ public class IgraPor extends AbstractIOServiceProvider {
 
   private class StationData extends StructureDataRegexp {
     StructureMembers members;
-    Matcher matcher;          // matcher on the station ascii
 
     StationData(StructureMembers members, Matcher matcher) {
       super(members, matcher);

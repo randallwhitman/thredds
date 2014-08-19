@@ -38,6 +38,7 @@ import ucar.nc2.iosp.BitReader;
 import ucar.unidata.io.RandomAccessFile;
 
 import java.io.IOException;
+import java.util.Formatter;
 
 /**
  * Decodes the GRIB1 binary data record
@@ -47,6 +48,7 @@ import java.io.IOException;
  */
 public class Grib1DataReader {
   static private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Grib1DataReader.class);
+  static private final float staticMissingValue = Float.NaN;
 
   ///////////////////////////////// Grib1Data
 
@@ -67,10 +69,6 @@ value R, the binary scale factor E and the decimal scale factor D by means of th
   Y * 10 ^ D = R + (Xi + Xj) * 2 ^ E
 
 */
-
-
-
-  static private final float staticMissingValue = Float.NaN;
 
   ///////////////////////////////////// Grib1BinaryDataSection
 

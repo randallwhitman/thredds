@@ -36,17 +36,6 @@ public class DapNetcdfFile extends ucar.nc2.NetcdfFile
     //////////////////////////////////////////////////
     // Type Declarations
 
-    /**
-     * Use this to avoid passing around multiple arguments
-     */
-    static protected class State
-    {
-        RequestMode requestmode = null;
-        ChecksumMode checksummode = null;
-        int status = 0;
-        boolean bigendian = false;
-    }
-
     static protected class NullCancelTask implements CancelTask
     {
         public boolean isCancel()

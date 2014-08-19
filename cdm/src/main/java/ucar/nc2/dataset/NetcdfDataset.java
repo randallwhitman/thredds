@@ -654,15 +654,14 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
 
     if (location == null)
       throw new IOException("NetcdfDataset.openFile: location is null");
+
     // Canonicalize the location
-    location = location.trim();
-    // should not be needed: location = StringUtil2.replace(location, '\\', '/');
+    location = location.trim();  // should not be needed: location = StringUtil2.replace(location, '\\', '/');
     List<String> allprotocols = Misc.getProtocols(location);
     String trueurl = location;
     String leadprotocol;
     if (allprotocols.size() == 0) {
-      // The location has no lead protocols, assume file:
-      leadprotocol = "file";
+      leadprotocol = "file";  // The location has no lead protocols, assume file:
     } else {
       leadprotocol = allprotocols.get(0);
     }
@@ -822,9 +821,7 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
     if (result != null)
       return result;
 
-    HTTPMethod method = null;
-    try {
-      method = HTTPFactory.Head(location);
+    try (HTTPMethod method = HTTPFactory.Head(location)) {
       int statusCode = method.execute();
       if (statusCode >= 300) {
         if (statusCode == 401)
@@ -839,8 +836,6 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
           return ServiceType.CdmRemote;
       }
       return null;
-    } finally {
-      if (method != null) method.close();
     }
   }
 
@@ -1550,7 +1545,7 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
   }
 
   // sort by coord sys, then name
-  private class VariableComparator implements java.util.Comparator {
+  private static class VariableComparator implements java.util.Comparator {
     public int compare(Object o1, Object o2) {
       VariableEnhanced v1 = (VariableEnhanced) o1;
       VariableEnhanced v2 = (VariableEnhanced) o2;
@@ -1811,7 +1806,7 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
     return new NetcdfDatasetInfo(this);
   } */
 
-  void dumpClasses(Group g, PrintStream out) {
+  void dumpClasses(Group g, PrintWriter out) {
 
     out.println("Dimensions:");
     for (Dimension ds : g.getDimensions()) {
@@ -1833,7 +1828,7 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
     }
   }
 
-  private void dumpVariables(List<Variable> vars, PrintStream out) {
+  private void dumpVariables(List<Variable> vars, PrintWriter out) {
     for (Variable v : vars) {
       out.print("  " + v.getFullName() + " " + v.getClass().getName()); // +" "+Integer.toHexString(v.hashCode()));
       if (v instanceof CoordinateAxis)
@@ -1852,7 +1847,7 @@ public class NetcdfDataset extends ucar.nc2.NetcdfFile {
    * @param out write here
    * @param ncd info about this
    */
-  public static void debugDump(PrintStream out, NetcdfDataset ncd) {
+  public static void debugDump(PrintWriter out, NetcdfDataset ncd) {
     String referencedLocation = ncd.orgFile == null ? "(null)" : ncd.orgFile.getLocation();
     out.println("\nNetcdfDataset dump = " + ncd.getLocation() + " url= " + referencedLocation + "\n");
     ncd.dumpClasses(ncd.getRootGroup(), out);

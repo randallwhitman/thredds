@@ -5,7 +5,7 @@
   <parent>
     <groupId>edu.ucar</groupId>
     <artifactId>thredds-parent</artifactId>
-    <version>4.5.2-SNAPSHOT</version>
+    <version>4.5.3-SNAPSHOT</version>
   </parent>
 
   <!-- ===========================================================
@@ -151,7 +151,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <skip>false</skip>
-          <testFailureIgnore>true</testFailureIgnore>
           <includes>
             <include>ucar/nc2/TestReadFormats.java</include>
           </includes>
@@ -164,7 +163,6 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <skip>${skipTests}</skip>
-          <testFailureIgnore>true</testFailureIgnore>
           <excludes>
             <exclude>/thredds/tds/*</exclude>
           </excludes>
