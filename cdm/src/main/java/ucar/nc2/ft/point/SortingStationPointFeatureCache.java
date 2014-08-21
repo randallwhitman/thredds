@@ -1,8 +1,12 @@
 package ucar.nc2.ft.point;
 
 import com.google.common.base.Preconditions;
+import ucar.nc2.constants.FeatureType;
+import ucar.nc2.ft.*;
+import ucar.nc2.time.CalendarDateRange;
 import ucar.nc2.units.DateUnit;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -10,10 +14,22 @@ import java.util.*;
  * Created by cwardgar on 2014/08/21.
  */
 public class SortingStationPointFeatureCache implements Iterable<StationPointFeature> {
+    public static final Comparator<StationPointFeature> stationNameComparator = new Comparator<StationPointFeature>() {
+        @Override
+        public int compare(StationPointFeature pointFeat1, StationPointFeature pointFeat2) {
+            return pointFeat1.getStation().getName().compareTo(pointFeat2.getStation().getName());
+        }
+    };
+
+
     private final Comparator<StationPointFeature> comp;
     private final SortedMap<StationPointFeature, List<StationPointFeature>> inMemCache;
 
     private volatile StationFeatureCopyFactory stationFeatCopyFactory;
+
+    public SortingStationPointFeatureCache() {
+        this(stationNameComparator);
+    }
 
     // We're going to init stationFeatCopyFactory using the first feat that's add()ed.
     public SortingStationPointFeatureCache(Comparator<StationPointFeature> comp) {
@@ -43,6 +59,36 @@ public class SortingStationPointFeatureCache implements Iterable<StationPointFea
         }
 
         bucket.add(featCopy);
+    }
+
+    public void addAll(File datasetFile) throws NoFactoryFoundException, IOException {
+        Formatter errlog = new Formatter();
+        FeatureDataset fd = FeatureDatasetFactoryManager.open(
+                FeatureType.STATION, datasetFile.getAbsolutePath(), null, errlog);
+
+        if (fd == null) {
+            throw new NoFactoryFoundException(errlog.toString());
+        } else {
+            try (FeatureDatasetPoint fdPoint = (FeatureDatasetPoint) fd) {
+                addAll(fdPoint);
+            }
+        }
+    }
+
+    // fdPoint remains open.
+    public void addAll(FeatureDatasetPoint fdPoint) throws IOException {
+        for (FeatureCollection featCol : fdPoint.getPointFeatureCollectionList()) {
+            StationTimeSeriesFeatureCollection stationCol = (StationTimeSeriesFeatureCollection) featCol;
+            PointFeatureCollection pointFeatColl = stationCol.flatten(null, (CalendarDateRange) null);
+            PointFeatureIterator pointFeatIter = pointFeatColl.getPointFeatureIterator(-1);
+
+            try {
+                StationPointFeature pointFeat = (StationPointFeature) pointFeatIter.next();
+                add(pointFeat);
+            } finally {
+                pointFeatIter.finish();
+            }
+        }
     }
 
     // Double-check idiom for lazy initialization of instance fields. See Effective Java 2nd Ed, p. 283.
