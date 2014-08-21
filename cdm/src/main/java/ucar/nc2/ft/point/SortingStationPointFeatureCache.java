@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Created by cwardgar on 2014/08/05.
+ * Created by cwardgar on 2014/08/21.
  */
-public class SortingStationPointFeatureCache {
+public class SortingStationPointFeatureCache implements Iterable<StationPointFeature> {
     private final Comparator<StationPointFeature> comp;
     private final SortedMap<StationPointFeature, List<StationPointFeature>> inMemCache;
 
@@ -70,5 +70,48 @@ public class SortingStationPointFeatureCache {
 
         DateUnit timeUnit = ((PointFeatureImpl) proto).getTimeUnit();
         return new StationFeatureCopyFactory(proto, timeUnit);
+    }
+
+    // TODO: Once this method is called, prohibit any further additions to cache.
+    @Override
+    public Iterator<StationPointFeature> iterator() {
+        return new Iter();
+    }
+
+    private class Iter implements Iterator<StationPointFeature> {
+        private final Iterator<List<StationPointFeature>> bucketsIter;
+        private Iterator<StationPointFeature> featsIter;
+
+        public Iter() {
+            this.bucketsIter = inMemCache.values().iterator();
+        }
+
+        @Override
+        public boolean hasNext() {  // Method is idempotent.
+            while (featsIter == null || !featsIter.hasNext()) {
+                if (!bucketsIter.hasNext()) {
+                    return false;
+                } else {
+                    featsIter = bucketsIter.next().iterator();
+                }
+            }
+
+            assert featsIter != null && featsIter.hasNext();
+            return true;
+        }
+
+        @Override
+        public StationPointFeature next() {
+            if (!hasNext()) {  // Don't rely on user to call this.
+                throw new NoSuchElementException("There are no more elements.");
+            } else {
+                return featsIter.next();
+            }
+        }
+
+        @Override
+        public void remove() {
+            throw new UnsupportedOperationException("Operation not supported by this iterator.");
+        }
     }
 }
