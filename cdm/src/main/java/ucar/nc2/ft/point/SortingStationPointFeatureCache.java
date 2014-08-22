@@ -78,16 +78,25 @@ public class SortingStationPointFeatureCache implements Iterable<StationPointFea
     // fdPoint remains open.
     public void addAll(FeatureDatasetPoint fdPoint) throws IOException {
         for (FeatureCollection featCol : fdPoint.getPointFeatureCollectionList()) {
-            StationTimeSeriesFeatureCollection stationCol = (StationTimeSeriesFeatureCollection) featCol;
-            PointFeatureCollection pointFeatColl = stationCol.flatten(null, (CalendarDateRange) null);
-            PointFeatureIterator pointFeatIter = pointFeatColl.getPointFeatureIterator(-1);
+          PointFeatureCollection pointFeatCol;
+          if (featCol instanceof  PointFeatureCollection) {
+            pointFeatCol = (PointFeatureCollection) featCol;
+          } else if (featCol instanceof  NestedPointFeatureCollection) {
+            pointFeatCol = ((NestedPointFeatureCollection) featCol).flatten(null, (CalendarDateRange) null);
+          } else {
+            throw new AssertionError("getPointFeatureCollectionList() guarantees that list elements will be instances " +
+                    "of PointFeatureCollection or NestedPointFeatureCollection, not " + featCol.getClass().getName());
+          }
 
-            try {
-                StationPointFeature pointFeat = (StationPointFeature) pointFeatIter.next();
-                add(pointFeat);
-            } finally {
-                pointFeatIter.finish();
+          PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(-1);
+          try {
+            while (pointFeatIter.hasNext()) {
+              StationPointFeature pointFeat = (StationPointFeature) pointFeatIter.next();
+              add(pointFeat);
             }
+          } finally {
+            pointFeatIter.finish();
+          }
         }
     }
 

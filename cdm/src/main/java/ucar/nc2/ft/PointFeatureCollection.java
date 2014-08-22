@@ -61,7 +61,7 @@ public interface PointFeatureCollection extends FeatureCollection {
   public String getAltUnits();
 
   /**
-   * Other variables needed for co,pleteness, eg joined coordinate variables
+   * Other variables needed for completeness, eg joined coordinate variables
    * @return list of extra variables, may be empty not null
    */
   public List<Variable> getExtraVariables();

@@ -24,6 +24,7 @@ public class FilteredPointFeatureIterator extends PointIteratorAbstract {
 
     ///////////////////////////////////////////// PointFeatureIterator /////////////////////////////////////////////
 
+    // TODO: Make this idempotent.
     @Override
     public boolean hasNext() throws IOException {
         pointFeature = nextFilteredDataPoint();
