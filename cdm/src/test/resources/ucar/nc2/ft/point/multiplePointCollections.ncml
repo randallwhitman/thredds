@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- See http://cfconventions.org/Data/cf-convetions/cf-conventions-1.6/build/cf-conventions.html#Example%20H.1.1 -->
+<netcdf xmlns="http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2">
+    <dimension name="obs1" length="6"/>
+    <dimension name="obs2" length="8"/>
+
+    <!-- Coord sys 1 -->
+
+    <variable name="time1" shape="obs1" type="double">
+        <attribute name="standard_name" value="time"/>
+        <attribute name="long_name" value="time of measurement"/>
+        <attribute name="units" value="days since 1970-01-01 00:00:00"/>
+        <values start="1" increment="1"/>
+    </variable>
+
+    <variable name="lon1" shape="obs1" type="float">
+        <attribute name="standard_name" value="longitude"/>
+        <attribute name="long_name" value="longitude of the observation"/>
+        <attribute name="units" value="degrees_east"/>
+        <values start="2" increment="2"/>
+    </variable>
+
+    <variable name="lat1" shape="obs1" type="float">
+        <attribute name="standard_name" value="latitude"/>
+        <attribute name="long_name" value="latitude of the observation"/>
+        <attribute name="units" value="degrees_north"/>
+        <values start="3" increment="3"/>
+    </variable>
+
+    <variable name="alt1" shape="obs1" type="float">
+        <attribute name="long_name" value="vertical distance above the surface"/>
+        <attribute name="standard_name" value="height"/>
+        <attribute name="units" value="m"/>
+        <attribute name="positive" value="up"/>
+        <attribute name="axis" value="Z"/>
+        <values start="4" increment="4"/>
+    </variable>
+
+    <variable name="humidity1" shape="obs1" type="float">
+        <attribute name="standard_name" value="specific_humidity"/>
+        <attribute name="coordinates" value="time1 lat1 lon1 alt1"/>
+        <values start="5" increment="5"/>
+    </variable>
+
+    <!-- Coord sys 2 -->
+
+    <variable name="time2" shape="obs2" type="double">
+        <attribute name="standard_name" value="time"/>
+        <attribute name="long_name" value="time of measurement"/>
+        <attribute name="units" value="days since 1970-01-01 00:00:00"/>
+        <values start="1" increment="1"/>
+    </variable>
+
+    <variable name="lon2" shape="obs2" type="float">
+        <attribute name="standard_name" value="longitude"/>
+        <attribute name="long_name" value="longitude of the observation"/>
+        <attribute name="units" value="degrees_east"/>
+        <values start="2" increment="2"/>
+    </variable>
+
+    <variable name="lat2" shape="obs2" type="float">
+        <attribute name="standard_name" value="latitude"/>
+        <attribute name="long_name" value="latitude of the observation"/>
+        <attribute name="units" value="degrees_north"/>
+        <values start="3" increment="3"/>
+    </variable>
+
+    <variable name="alt2" shape="obs2" type="float">
+        <attribute name="long_name" value="vertical distance above the surface"/>
+        <attribute name="standard_name" value="height"/>
+        <attribute name="units" value="m"/>
+        <attribute name="positive" value="up"/>
+        <attribute name="axis" value="Z"/>
+        <values start="4" increment="4"/>
+    </variable>
+
+    <variable name="humidity2" shape="obs2" type="float">
+        <attribute name="standard_name" value="specific_humidity"/>
+        <attribute name="coordinates" value="time2 lat2 lon2 alt2"/>
+        <values start="5" increment="5"/>
+    </variable>
+
+    <attribute name="featureType" value="point"/>
+    <attribute name="Conventions" value="CF-1.6"/>
+</netcdf>

@@ -204,11 +204,11 @@
         <directory>src/test/resources</directory>
         <includes>
           <include>thredds/**</include>
+          <include>ucar/**</include>
         </includes>
       </testResource>
     </testResources>
 
   </build>
-
 
 </project>

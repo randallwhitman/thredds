@@ -26,8 +26,12 @@ import java.util.Iterator;
 class PointDatasetIterator implements PointFeatureIterator {
     private final Iterator<FeatureCollection> featColIter;
     private PointFeatureIterator pointFeatIter;
+
     private int bufferSize = -1;
     private int count = 0;
+    private boolean calcBounds = false;
+    private CalendarDateRange calendarDateRange;
+    private LatLonRect boundingBox;
 
     PointDatasetIterator(FeatureDatasetPoint fdPoint) {
         this.featColIter = fdPoint.getPointFeatureCollectionList().iterator();
@@ -38,7 +42,7 @@ class PointDatasetIterator implements PointFeatureIterator {
         while (pointFeatIter == null || !pointFeatIter.hasNext()) {
             if (pointFeatIter != null) {
                 pointFeatIter.finish();  // Release the resources of the old iter.
-                // calcBounds(pointFeatIter)
+                updateBounds(pointFeatIter);
             }
 
             if (!featColIter.hasNext()) {
@@ -49,6 +53,24 @@ class PointDatasetIterator implements PointFeatureIterator {
         }
 
         return true;
+    }
+
+    private void updateBounds(PointFeatureIterator pointFeatIter) {
+        if (calcBounds) {
+            count += pointFeatIter.getCount();
+
+            if (calendarDateRange == null) {
+                calendarDateRange = pointFeatIter.getCalendarDateRange();
+            } else {
+                calendarDateRange = calendarDateRange.extend(pointFeatIter.getCalendarDateRange());
+            }
+
+            if (boundingBox == null) {
+                boundingBox = pointFeatIter.getBoundingBox();
+            } else {
+                boundingBox.extend(pointFeatIter.getBoundingBox());
+            }
+        }
     }
 
     private PointFeatureIterator getNextPointFeatureIterator() throws IOException {
@@ -65,22 +87,20 @@ class PointDatasetIterator implements PointFeatureIterator {
                     "of PointFeatureCollection or NestedPointFeatureCollection, not " + featCol.getClass().getName());
         }
 
-        return pointFeatCol.getPointFeatureIterator(bufferSize);
+        PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(bufferSize);
+        if (calcBounds) {
+            pointFeatIter.setCalculateBounds(pointFeatCol);
+        }
+        return pointFeatIter;
     }
 
-    // This method could be a lot simpler if hasNext() guaranteed idempotency.
     @Override
     public PointFeature next() throws IOException {
-        PointFeature pointFeat = null;
-        if (pointFeatIter != null) {  // Could be null if featColIter is empty.
-            pointFeat = pointFeatIter.next();
+        if (pointFeatIter == null) {  // Could be null if featColIter is empty.
+            return null;
+        } else {
+            return pointFeatIter.next();
         }
-
-        if (pointFeat != null) {
-            ++count;
-        }
-
-        return pointFeat;
     }
 
     @Override
@@ -97,22 +117,23 @@ class PointDatasetIterator implements PointFeatureIterator {
 
     @Override
     public void setCalculateBounds(PointFeatureCollection collection) {
-        throw new UnsupportedOperationException("Operation not supported by this iterator.");
+        this.calcBounds = true;
     }
 
     @Override
     public LatLonRect getBoundingBox() {
-        throw new UnsupportedOperationException("Operation not supported by this iterator.");
+        return boundingBox;
     }
 
     @Override
     public DateRange getDateRange() {
-        throw new UnsupportedOperationException("Operation not supported by this iterator.");
+        CalendarDateRange cdr = getCalendarDateRange();
+        return (cdr != null) ? cdr.toDateRange() : null;
     }
 
     @Override
     public CalendarDateRange getCalendarDateRange() {
-        throw new UnsupportedOperationException("Operation not supported by this iterator.");
+        return calendarDateRange;
     }
 
     @Override

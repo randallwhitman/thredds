@@ -1,12 +1,8 @@
 package ucar.nc2.ft.point;
 
 import com.google.common.base.Preconditions;
-import ucar.nc2.constants.FeatureType;
-import ucar.nc2.ft.*;
-import ucar.nc2.time.CalendarDateRange;
 import ucar.nc2.units.DateUnit;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
@@ -61,44 +57,44 @@ public class SortingStationPointFeatureCache implements Iterable<StationPointFea
         bucket.add(featCopy);
     }
 
-    public void addAll(File datasetFile) throws NoFactoryFoundException, IOException {
-        Formatter errlog = new Formatter();
-        FeatureDataset fd = FeatureDatasetFactoryManager.open(
-                FeatureType.STATION, datasetFile.getAbsolutePath(), null, errlog);
-
-        if (fd == null) {
-            throw new NoFactoryFoundException(errlog.toString());
-        } else {
-            try (FeatureDatasetPoint fdPoint = (FeatureDatasetPoint) fd) {
-                addAll(fdPoint);
-            }
-        }
-    }
-
-    // fdPoint remains open.
-    public void addAll(FeatureDatasetPoint fdPoint) throws IOException {
-        for (FeatureCollection featCol : fdPoint.getPointFeatureCollectionList()) {
-          PointFeatureCollection pointFeatCol;
-          if (featCol instanceof  PointFeatureCollection) {
-            pointFeatCol = (PointFeatureCollection) featCol;
-          } else if (featCol instanceof  NestedPointFeatureCollection) {
-            pointFeatCol = ((NestedPointFeatureCollection) featCol).flatten(null, (CalendarDateRange) null);
-          } else {
-            throw new AssertionError("getPointFeatureCollectionList() guarantees that list elements will be instances " +
-                    "of PointFeatureCollection or NestedPointFeatureCollection, not " + featCol.getClass().getName());
-          }
-
-          PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(-1);
-          try {
-            while (pointFeatIter.hasNext()) {
-              StationPointFeature pointFeat = (StationPointFeature) pointFeatIter.next();
-              add(pointFeat);
-            }
-          } finally {
-            pointFeatIter.finish();
-          }
-        }
-    }
+//    public void addAll(File datasetFile) throws NoFactoryFoundException, IOException {
+//        Formatter errlog = new Formatter();
+//        FeatureDataset fd = FeatureDatasetFactoryManager.open(
+//                FeatureType.STATION, datasetFile.getAbsolutePath(), null, errlog);
+//
+//        if (fd == null) {
+//            throw new NoFactoryFoundException(errlog.toString());
+//        } else {
+//            try (FeatureDatasetPoint fdPoint = (FeatureDatasetPoint) fd) {
+//                addAll(fdPoint);
+//            }
+//        }
+//    }
+//
+//    // fdPoint remains open.
+//    public void addAll(FeatureDatasetPoint fdPoint) throws IOException {
+//        for (FeatureCollection featCol : fdPoint.getPointFeatureCollectionList()) {
+//          PointFeatureCollection pointFeatCol;
+//          if (featCol instanceof  PointFeatureCollection) {
+//            pointFeatCol = (PointFeatureCollection) featCol;
+//          } else if (featCol instanceof  NestedPointFeatureCollection) {
+//            pointFeatCol = ((NestedPointFeatureCollection) featCol).flatten(null, (CalendarDateRange) null);
+//          } else {
+//            throw new AssertionError("getPointFeatureCollectionList() guarantees that list elements will be instances " +
+//                    "of PointFeatureCollection or NestedPointFeatureCollection, not " + featCol.getClass().getName());
+//          }
+//
+//          PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(-1);
+//          try {
+//            while (pointFeatIter.hasNext()) {
+//              StationPointFeature pointFeat = (StationPointFeature) pointFeatIter.next();
+//              add(pointFeat);
+//            }
+//          } finally {
+//            pointFeatIter.finish();
+//          }
+//        }
+//    }
 
     // Double-check idiom for lazy initialization of instance fields. See Effective Java 2nd Ed, p. 283.
     private StationFeatureCopyFactory getStationFeatureCopyFactory(StationPointFeature proto) throws IOException {
