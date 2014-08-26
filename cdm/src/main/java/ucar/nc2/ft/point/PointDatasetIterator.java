@@ -17,13 +17,7 @@ import java.util.Iterator;
  * @author cwardgar
  * @since 2014/08/22
  */
-/*
- * Package-private because this is not a full implementation of PointFeatureIterator; it skips the calcBounds stuff.
- * It's not clear whether it's even appropriate to implement those methods: they make sense in the context of an
- * iterator over a single collection, but not necessarily an iterator over a dataset (which may contain several
- * collections, potentially with different coordinate systems).
- */
-class PointDatasetIterator implements PointFeatureIterator {
+public class PointDatasetIterator implements PointFeatureIterator {
     private final Iterator<FeatureCollection> featColIter;
     private PointFeatureIterator pointFeatIter;
 
@@ -33,7 +27,7 @@ class PointDatasetIterator implements PointFeatureIterator {
     private CalendarDateRange calendarDateRange;
     private LatLonRect boundingBox;
 
-    PointDatasetIterator(FeatureDatasetPoint fdPoint) {
+    public PointDatasetIterator(FeatureDatasetPoint fdPoint) {
         this.featColIter = fdPoint.getPointFeatureCollectionList().iterator();
     }
 
