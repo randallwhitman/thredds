@@ -64,7 +64,7 @@ public class LogLocalManager {
   }
 
   static File getDirectory(String server, String where) {
-    String cleanServer = null;
+    String cleanServer;
     try {
       cleanServer = java.net.URLEncoder.encode(server, "UTF8");
     } catch (UnsupportedEncodingException e) {
@@ -109,12 +109,14 @@ public class LogLocalManager {
     if (!localDir.exists()) {
       if (!localDir.mkdirs()) {
         System.out.printf("cant create %s%n", localDir);
-        return new ArrayList<FileDateRange>(0);
+        return new ArrayList<>(0);
       }
     }
 
-    List<FileDateRange> list = new ArrayList<FileDateRange>();
-    for (File f : localDir.listFiles()) {
+    List<FileDateRange> list = new ArrayList<>();
+    File[] files = localDir.listFiles();
+    if (files == null) return new ArrayList<>(0);
+    for (File f : files) {
       if (f.isDirectory()) continue;
       if (f.getName().endsWith(".zip")) continue;
       list.add(new FileDateRange(f));
@@ -152,7 +154,7 @@ public class LogLocalManager {
     }
 
     // filter by time range
-    localFiles = new ArrayList<FileDateRange>();
+    localFiles = new ArrayList<>();
     for (FileDateRange have : list) {
       if (start != null && start.after(have.end)) continue;
       if (end != null && have.start.after(end)) continue;
@@ -161,7 +163,7 @@ public class LogLocalManager {
     return localFiles;
   }
 
-  private class ServletFileCompare implements Comparator<FileDateRange> {
+  private static class ServletFileCompare implements Comparator<FileDateRange> {
     public int compare(FileDateRange o1, FileDateRange o2) {
       if (o1.f.getName().equals(specialLog)) return 1;
       if (o2.f.getName().equals(specialLog)) return -1;
@@ -208,7 +210,7 @@ public class LogLocalManager {
       } else {
         try {
 
-          String filenameDate = null;
+          String filenameDate;
           int len = name.length();
 
           // all: access.2013-07-29.log
@@ -220,6 +222,8 @@ public class LogLocalManager {
             filenameDate = name.substring("threddsServlet.log.".length());
           } else if (name.startsWith("threddsServlet.")) {
             filenameDate = name.substring("threddsServlet.".length(), len - 4);
+          } else {
+            return null;
           }
 
           return localFormat.parse( filenameDate );

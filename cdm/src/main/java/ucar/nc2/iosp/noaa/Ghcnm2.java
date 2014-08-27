@@ -889,7 +889,7 @@ public class Ghcnm2 extends AbstractIOServiceProvider {
         }
         currStn = s;
       }
-      currStn.dataCount++;
+      if (currStn != null) currStn.dataCount++;
     }
     //System.out.printf("ok stns=%s data=%d%n", stnCount, totalCount);
 
@@ -924,7 +924,7 @@ public class Ghcnm2 extends AbstractIOServiceProvider {
     return new StationIndex(proto);
   }
 
-  private class StationIndex {
+  private static class StationIndex {
     long stnId;
     long stnPos; // file pos in inv file
     long dataPos; // file pos of first data line in the data file

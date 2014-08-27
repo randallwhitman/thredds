@@ -67,8 +67,10 @@ public class ADNWriter {
     this.messBuffer = mess;
 
     File dir = new File(fileDir);
-    if (!dir.exists())
-      dir.mkdirs();
+    if (!dir.exists()) {
+      boolean ret = dir.mkdirs();
+      assert ret;
+    }
 
     CatalogCrawler.Listener listener = new CatalogCrawler.Listener() {
       public void getDataset(InvDataset ds, Object context) {
@@ -83,7 +85,7 @@ public class ADNWriter {
     CatalogCrawler crawler = new CatalogCrawler( CatalogCrawler.USE_ALL, true, listener);
     crawler.crawl(cat, null, ps, null);
     mess.append("\n*********************\n");
-    mess.append(bis.toString());
+    mess.append(new String(bis.toByteArray(), CDM.utf8Charset));
   }
 
   private void doOneDataset( InvDataset ds) {

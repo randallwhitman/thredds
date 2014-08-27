@@ -170,7 +170,7 @@ public class NOWRadheader {
         }
     }
 
-    public byte[] getData(int offset) throws Exception {
+    public byte[] getData(int offset) throws IOException {
         int    readLen = (int) raf.length();
         byte[] b       = new byte[readLen];
         int    pos     = 0;
@@ -917,7 +917,7 @@ public class NOWRadheader {
     }
 
     // variable info for reading/writing
-    class Vinfo {
+    static class Vinfo {
         long    hoff;        // header offset
         boolean isRadial;    // is it a radial variable?
         int     xt;

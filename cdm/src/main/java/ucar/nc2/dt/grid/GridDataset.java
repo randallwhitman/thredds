@@ -449,7 +449,7 @@ public class GridDataset implements ucar.nc2.dt.GridDataset, ucar.nc2.ft.Feature
   /**
    * This is a set of GeoGrids with the same GeoCoordSys.
    */
-  public class Gridset implements ucar.nc2.dt.GridDataset.Gridset {
+  public static class Gridset implements ucar.nc2.dt.GridDataset.Gridset {
 
     private GridCoordSys gcc;
     private List<GridDatatype> grids = new ArrayList<>();
@@ -527,7 +527,7 @@ public class GridDataset implements ucar.nc2.dt.GridDataset, ucar.nc2.ft.Feature
   protected FileCache fileCache;
 
   @Override
-  public void setFileCache(FileCache fileCache) {
+  public synchronized void setFileCache(FileCache fileCache) {
     this.fileCache = fileCache;
   }
 
