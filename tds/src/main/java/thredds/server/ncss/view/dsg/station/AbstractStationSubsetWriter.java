@@ -4,17 +4,12 @@ import thredds.server.ncss.exception.FeaturesNotFoundException;
 import thredds.server.ncss.exception.NcssException;
 import thredds.server.ncss.params.NcssParamsBean;
 import thredds.server.ncss.view.dsg.AbstractDsgSubsetWriter;
-import thredds.server.ncss.view.dsg.FilteredPointFeatureIterator;
 import ucar.ma2.StructureData;
-import ucar.nc2.ft.FeatureCollection;
-import ucar.nc2.ft.FeatureDatasetPoint;
-import ucar.nc2.ft.PointFeature;
-import ucar.nc2.ft.PointFeatureIterator;
-import ucar.nc2.ft.StationTimeSeriesFeature;
-import ucar.nc2.ft.StationTimeSeriesFeatureCollection;
+import ucar.nc2.ft.*;
+import ucar.nc2.ft.point.PointIteratorFiltered;
 import ucar.nc2.ft.point.StationFeature;
-import ucar.nc2.ft.point.StationTimeSeriesFeatureImpl;
 import ucar.nc2.ft.point.StationPointFeature;
+import ucar.nc2.ft.point.StationTimeSeriesFeatureImpl;
 import ucar.nc2.time.CalendarDate;
 import ucar.nc2.units.DateType;
 import ucar.unidata.geoloc.LatLonPoint;
@@ -161,7 +156,7 @@ public abstract class AbstractStationSubsetWriter extends AbstractDsgSubsetWrite
             if (closestTime == null) {
                 return stationFeat.getPointFeatureIterator(bufferSize);
             } else {
-                return new FilteredPointFeatureIterator(
+                return new PointIteratorFiltered(
                         stationFeat.getPointFeatureIterator(bufferSize), new TimeFilter(closestTime));
             }
         }

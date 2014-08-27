@@ -50,9 +50,9 @@ public class PointDatasetIterator implements PointFeatureIterator {
     }
 
     private void updateBounds(PointFeatureIterator pointFeatIter) {
-        if (calcBounds) {
-            count += pointFeatIter.getCount();
+        count += pointFeatIter.getCount();  // Always count obs. For parity with PointIteratorAbstract.calcBounds().
 
+        if (calcBounds) {
             if (calendarDateRange == null) {
                 calendarDateRange = pointFeatIter.getCalendarDateRange();
             } else {

@@ -43,7 +43,7 @@ public class PointDatasetIteratorTest {
             }.getMockInstance();
 
             PointDatasetIterator pointIter = new PointDatasetIterator(fakeFdPoint);
-            pointIter.setCalculateBounds(null);
+            pointIter.setCalculateBounds(null);  // Turn on bounds calculation.
 
             List<Float> expectedHumidityVals = Arrays.asList(1f, 2f, 3f, 10f, 20f, 30f, 100f, 200f, 300f);
             List<Float> actualHumidityVals = getMemberValsFromIter(pointIter, "humidity");
@@ -72,13 +72,15 @@ public class PointDatasetIteratorTest {
                 FeatureType.ANY_POINT, file.getAbsolutePath(), null);
     }
 
+    // Iterates through pointIter, recording the values for the specified member.
+    // After the iteration, bounds information will be available from the iterator, if calculation was enabled.
     private static List<Float> getMemberValsFromIter(PointFeatureIterator pointIter, String memberName)
             throws IOException {
         List<Float> memberVals = new LinkedList<>();
         try {
             while (pointIter.hasNext()) {
                 PointFeature pointFeat = pointIter.next();
-                StructureData data = pointFeat.getData();
+                StructureData data = pointFeat.getFeatureData();
 
                 Array memberArray = data.getArray(memberName);
                 Assert.assertEquals(1, memberArray.getSize());
