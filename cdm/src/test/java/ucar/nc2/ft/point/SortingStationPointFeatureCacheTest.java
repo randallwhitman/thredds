@@ -2,6 +2,7 @@ package ucar.nc2.ft.point;
 
 import org.junit.Test;
 import ucar.nc2.ft.NoFactoryFoundException;
+import ucar.nc2.ft.PointFeature;
 import ucar.unidata.test.util.TestDir;
 
 import java.io.File;
@@ -12,6 +13,10 @@ public class SortingStationPointFeatureCacheTest {
     public void roundTrip() throws IOException, NoFactoryFoundException {
         File testFile = new File(TestDir.cdmLocalTestDataDir + "cfDocDsgExamples/H.2.5.1.ncml");
         SortingStationPointFeatureCache cache = new SortingStationPointFeatureCache();
-//        cache.addAll(testFile);
+        cache.addAll(testFile);
+
+        for (PointFeature pointFeat : cache) {
+
+        }
     }
 }
