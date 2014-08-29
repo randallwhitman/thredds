@@ -5,11 +5,18 @@ import ucar.ma2.Array;
 import ucar.ma2.MAMath;
 import ucar.ma2.StructureData;
 import ucar.ma2.StructureMembers;
+import ucar.nc2.constants.FeatureType;
+import ucar.nc2.ft.FeatureDatasetFactoryManager;
+import ucar.nc2.ft.FeatureDatasetPoint;
+import ucar.nc2.ft.NoFactoryFoundException;
 import ucar.nc2.ft.PointFeature;
 import ucar.unidata.geoloc.EarthLocation;
 import ucar.unidata.geoloc.Station;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
@@ -19,6 +26,32 @@ import java.util.Objects;
  * @since 2014/08/28
  */
 public class PointTestUtil {
+    // Can be used to open datasets in /thredds/cdm/src/test/resources/ucar/nc2/ft/point
+    public static FeatureDatasetPoint openPointDataset(String resource)
+            throws IOException, NoFactoryFoundException, URISyntaxException {
+        File file = new File(PointTestUtil.class.getResource(resource).toURI());
+        return (FeatureDatasetPoint) FeatureDatasetFactoryManager.open(
+                FeatureType.ANY_POINT, file.getAbsolutePath(), null);
+    }
+
+
+    public static boolean equals(Iterator<StationPointFeature> iter1, Iterator<StationPointFeature> iter2)
+            throws IOException {
+        if (iter1 == iter2) {
+            return true;
+        } else if (iter1 == null || iter2 == null) {
+            return false;
+        }
+
+        while (iter1.hasNext() && iter2.hasNext()) {
+            if (!equals(iter1.next(), iter2.next())) {
+                return false;
+            }
+        }
+
+        return !(iter1.hasNext() || iter2.hasNext());
+    }
+
     public static boolean equals(StationPointFeature stationPointFeat1, StationPointFeature stationPointFeat2)
             throws IOException {
         if (stationPointFeat1 == stationPointFeat2) {
@@ -159,7 +192,7 @@ public class PointTestUtil {
         }
         // StructureMembers.memberHash is derived from StructureMembers.members; no need to test it.
 
-        return false;
+        return true;
     }
 
     public static boolean equals(
@@ -174,10 +207,7 @@ public class PointTestUtil {
         ListIterator<StructureMembers.Member> membersIter2 = membersList2.listIterator();
 
         while (membersIter1.hasNext() && membersIter2.hasNext()) {
-            StructureMembers.Member member1 = membersIter1.next();
-            StructureMembers.Member member2 = membersIter2.next();
-
-            if (!equals(member1, member2)) {
+            if (!equals(membersIter1.next(), membersIter2.next())) {
                 return false;
             }
         }

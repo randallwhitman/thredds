@@ -5,7 +5,6 @@ import org.junit.Test;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayChar;
 import ucar.ma2.StructureData;
-import ucar.nc2.constants.FeatureType;
 import ucar.nc2.ft.*;
 import ucar.nc2.time.CalendarDate;
 import ucar.nc2.time.CalendarDateRange;
@@ -13,7 +12,6 @@ import ucar.nc2.time.CalendarDateUnit;
 import ucar.unidata.geoloc.LatLonPointImpl;
 import ucar.unidata.geoloc.LatLonRect;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
@@ -24,7 +22,7 @@ public class PointIteratorFilteredTest {
     // Regression test for refactoring PointIteratorFiltered to use PointFeatureIterator.Filter internally.
     @Test
     public void timeSpaceFilter() throws NoFactoryFoundException, IOException, URISyntaxException {
-        try (FeatureDatasetPoint fdPoint = newFeatureDatasetPoint("pointsToFilter.ncml")) {
+        try (FeatureDatasetPoint fdPoint = PointTestUtil.openPointDataset("pointsToFilter.ncml")) {
             PointFeatureIterator pointIter = new PointDatasetIterator(fdPoint);
 
             double latMin = +10.0;
@@ -55,13 +53,6 @@ public class PointIteratorFilteredTest {
 
             Assert.assertEquals(expectedIdsOfFilteredPoints, actualIdsOfFilteredPoints);
         }
-    }
-
-    private static FeatureDatasetPoint newFeatureDatasetPoint(String resource)
-            throws IOException, NoFactoryFoundException, URISyntaxException {
-        File file = new File(PointDatasetIteratorTest.class.getResource(resource).toURI());
-        return (FeatureDatasetPoint) FeatureDatasetFactoryManager.open(
-                FeatureType.ANY_POINT, file.getAbsolutePath(), null);
     }
 
     private static String getIdOfPoint(PointFeature pointFeat) throws IOException {
