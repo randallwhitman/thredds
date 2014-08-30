@@ -91,8 +91,8 @@ public class PointIteratorFiltered extends PointIteratorAbstract {
      * Returns the next element in the iteration.
      *
      * @return the next element in the iteration
-     * @throws IOException                      if an I/O error occurs.
-     * @throws java.util.NoSuchElementException if the iteration has no more elements.
+     * @throws IOException            if an I/O error occurs.
+     * @throws NoSuchElementException if the iteration has no more elements.
      */
     // PointFeatureIterator.next() doesn't actually specify the behavior of next() when there are no more elements,
     // but we can define a stronger contract.

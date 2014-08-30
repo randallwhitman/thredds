@@ -13,7 +13,9 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Created by cwardgar on 2014/08/21.
+ *
+ * @author cwardgar
+ * @since 2014/08/21
  */
 public class SortingStationPointFeatureCache implements Iterable<StationPointFeature> {
     public static final Comparator<StationPointFeature> stationNameComparator = new Comparator<StationPointFeature>() {
