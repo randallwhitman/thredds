@@ -701,6 +701,12 @@ public class MAMath {
   }
 
   public static boolean isEqual(Array data1, Array data2) {
+    if (data1 == data2) {  // Covers case when both are null.
+      return true;
+    } else if (data1 == null || data2 == null) {
+      return false;
+    }
+
     if (data1.getSize() != data2.getSize()) return false;
     DataType dt = DataType.getType(data1.getElementType());
 

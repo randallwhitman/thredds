@@ -32,6 +32,7 @@
  */
 package ucar.nc2.ft.point;
 
+import com.google.common.base.Preconditions;
 import ucar.nc2.ft.*;
 import ucar.nc2.time.CalendarDate;
 import ucar.nc2.units.DateUnit;
@@ -59,10 +60,10 @@ public abstract class PointFeatureImpl implements PointFeature, Comparable<Point
   }
 
   public PointFeatureImpl( EarthLocation location, double obsTime, double nomTime, DateUnit timeUnit) {
-    this.location = location;
+    this.location = Preconditions.checkNotNull(location, "location == null");
     this.obsTime = obsTime;
     this.nomTime = (nomTime == 0) ? obsTime : nomTime; // LOOK temp kludge until protobuf accepts NaN as defaults
-    this.timeUnit = timeUnit;
+    this.timeUnit = Preconditions.checkNotNull(timeUnit, "timeUnit == null");
   }
 
   @Override
