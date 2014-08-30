@@ -59,7 +59,7 @@ public class PointFeatureCopyFactory {
   private final int sizeInBytes;
 
   public PointFeatureCopyFactory(PointFeature proto, DateUnit du) throws IOException {
-    StructureData sdata = proto.getData();
+    StructureData sdata = proto.getFeatureData();
     this.du = du;
     sm = new StructureMembers(sdata.getStructureMembers());
     sizeInBytes =  OBJECT_SIZE + POINTER_SIZE +       // PointFeatureCopy - 1 pointer                                             48
@@ -83,7 +83,7 @@ public class PointFeatureCopyFactory {
 
   public PointFeature deepCopy(PointFeature from) throws IOException {
     PointFeatureCopy deep = new PointFeatureCopy(from);
-    deep.data = StructureDataDeep.copy(from.getData(), sm);
+    deep.data = StructureDataDeep.copy(from.getFeatureData(), sm);
     return deep;
   }
 
