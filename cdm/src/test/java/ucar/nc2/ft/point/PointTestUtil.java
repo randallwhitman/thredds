@@ -238,13 +238,11 @@ public class PointTestUtil {
             return false;
         } else if (!Objects.deepEquals(member1.isVariableLength(), member2.isVariableLength())) {
             return false;
-        } else if (!MAMath.isEqual(member1.getDataArray(), member2.getDataArray())) {
-          return false;
-        } else if (!Objects.deepEquals(member1.getDataObject(), member2.getDataObject())) {
-            return false;
-        } else if (Objects.deepEquals(member1.getDataParam(), member2.getDataParam())) {
-            return false;
         }
+        // We're not comparing the results of getDataArray(), getDataObject(), or getDataParam() here
+        // because they are implementation-specific (see note in StructureMembers.java that those methods really
+        // shouldn't be public). Also, comparison of the data arrays is already being done in
+        // equals(StructureData, StructureData).
 
         return true;
     }
