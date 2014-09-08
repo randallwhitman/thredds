@@ -14,14 +14,14 @@ import java.util.NoSuchElementException;
  * @since 2014/08/30
  */
 public class PointIteratorAdapter extends PointIteratorAbstract {
-    private final Iterator<PointFeature> pointIter;
+    private final Iterator<? extends PointFeature> pointIter;
 
     /**
      * Creates a {@link PointFeatureIterator} from the supplied basic iterator.
      *
      * @param pointIter  a basic iterator over point features.
      */
-    public PointIteratorAdapter(Iterator<PointFeature> pointIter) {
+    public PointIteratorAdapter(Iterator<? extends PointFeature> pointIter) {
         this.pointIter = pointIter;
     }
 

@@ -44,7 +44,8 @@ public class SortingStationPointFeatureCacheTest {
         }
 
         Collections.reverse(spfList);
-        Assert.assertTrue(PointTestUtil.equals(spfList.iterator(), cache.iterator()));
+        Assert.assertTrue(
+                PointTestUtil.equals(new PointIteratorAdapter(spfList.iterator()), cache.getPointFeatureIterator()));
     }
 
     @Test
@@ -59,8 +60,14 @@ public class SortingStationPointFeatureCacheTest {
         List<String> expectedStationNames = Arrays.asList("CCC", "BBB", "AAA");
         List<String> actualStationNames = new LinkedList<>();
 
-        for (StationPointFeature pointFeat : cache) {
-            actualStationNames.add(pointFeat.getStation().getName());
+        PointFeatureIterator iter = cache.getPointFeatureIterator();
+        try {
+            while (iter.hasNext()) {
+                StationPointFeature stationPointFeat = (StationPointFeature) iter.next();
+                actualStationNames.add(stationPointFeat.getStation().getName());
+            }
+        } finally {
+            iter.finish();
         }
 
         Assert.assertEquals(expectedStationNames, actualStationNames);
@@ -77,20 +84,12 @@ public class SortingStationPointFeatureCacheTest {
         };
         SortingStationPointFeatureCache cache = new SortingStationPointFeatureCache(longestStationNameFirst);
 
-        try (FeatureDatasetPoint fdInput = PointTestUtil.openPointDataset("cacheTestInput1.ncml");
+        try (   FeatureDatasetPoint fdInput = PointTestUtil.openPointDataset("cacheTestInput1.ncml");
                 FeatureDatasetPoint fdExpected = PointTestUtil.openPointDataset("cacheTestExpected1.ncml")) {
             cache.addAll(fdInput);
 
-            Iterator<StationPointFeature> cacheFeatsIter = cache.iterator();
-            PointFeatureIterator expectedFeatsIter = new PointDatasetIterator(fdExpected);
-            try {
-                while (cacheFeatsIter.hasNext() && expectedFeatsIter.hasNext()) {
-                    StationPointFeature cacheFeat = cacheFeatsIter.next();
-                    StationPointFeature expectedFeat = (StationPointFeature) expectedFeatsIter.next();
-                }
-            } finally {
-                expectedFeatsIter.finish();
-            }
+            Assert.assertTrue(
+                    PointTestUtil.equals(new PointDatasetIterator(fdExpected), cache.getPointFeatureIterator()));
         }
     }
 }

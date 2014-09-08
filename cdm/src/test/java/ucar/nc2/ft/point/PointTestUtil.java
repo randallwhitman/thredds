@@ -6,17 +6,13 @@ import ucar.ma2.MAMath;
 import ucar.ma2.StructureData;
 import ucar.ma2.StructureMembers;
 import ucar.nc2.constants.FeatureType;
-import ucar.nc2.ft.FeatureDatasetFactoryManager;
-import ucar.nc2.ft.FeatureDatasetPoint;
-import ucar.nc2.ft.NoFactoryFoundException;
-import ucar.nc2.ft.PointFeature;
+import ucar.nc2.ft.*;
 import ucar.unidata.geoloc.EarthLocation;
 import ucar.unidata.geoloc.Station;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
@@ -35,21 +31,25 @@ public class PointTestUtil {
     }
 
 
-    public static boolean equals(Iterator<StationPointFeature> iter1, Iterator<StationPointFeature> iter2)
-            throws IOException {
+    public static boolean equals(PointFeatureIterator iter1, PointFeatureIterator iter2) throws IOException {
         if (iter1 == iter2) {
             return true;
         } else if (iter1 == null || iter2 == null) {
             return false;
         }
 
-        while (iter1.hasNext() && iter2.hasNext()) {
-            if (!equals(iter1.next(), iter2.next())) {
-                return false;
+        try {
+            while (iter1.hasNext() && iter2.hasNext()) {
+                if (!equals(iter1.next(), iter2.next())) {
+                    return false;
+                }
             }
-        }
 
-        return !(iter1.hasNext() || iter2.hasNext());
+            return !(iter1.hasNext() || iter2.hasNext());
+        } finally {
+            iter1.finish();
+            iter2.finish();
+        }
     }
 
     public static boolean equals(StationPointFeature stationPointFeat1, StationPointFeature stationPointFeat2)

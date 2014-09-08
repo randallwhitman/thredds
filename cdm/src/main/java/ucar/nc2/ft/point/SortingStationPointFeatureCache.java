@@ -17,7 +17,10 @@ import java.util.*;
  * @author cwardgar
  * @since 2014/08/21
  */
-public class SortingStationPointFeatureCache implements Iterable<StationPointFeature> {
+// This class ought to be a PointFeatureCollection, by extending PointCollectionImpl.
+// However, we do not have the timeUnit and altUnits that the constructor requires. Does it really need
+// that info? Can't it calculate it from one of its features? That interface may need to be re-thought.
+public class SortingStationPointFeatureCache {
     public static final Comparator<StationPointFeature> stationNameComparator = new Comparator<StationPointFeature>() {
         @Override
         public int compare(StationPointFeature pointFeat1, StationPointFeature pointFeat2) {
@@ -113,9 +116,8 @@ public class SortingStationPointFeatureCache implements Iterable<StationPointFea
     }
 
     // TODO: Once this method is called, prohibit any further additions to cache.
-    @Override
-    public Iterator<StationPointFeature> iterator() {
-        return new Iter();
+    public PointFeatureIterator getPointFeatureIterator() throws IOException {
+        return new PointIteratorAdapter(new Iter());
     }
 
     private class Iter implements Iterator<StationPointFeature> {
