@@ -13,7 +13,7 @@
   <groupId>edu.ucar</groupId>
   <artifactId>thredds-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.5.3-SNAPSHOT</version>
+  <version>4.5.4-SNAPSHOT</version>
   <name>Parent THREDDS and CDM modules</name>
   <description>
     The Unidata THREDDS project includes the netCDF-Java library (aka CDM) and
@@ -575,7 +575,19 @@
         <version>${com.google.guava.version}</version>
       </dependency>
 
-      <!-- UI -->
+      <dependency>
+        <groupId>edu.ucar</groupId>
+        <artifactId>jj2000</artifactId>
+        <version>${edu.ucar.jj2000.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.itadaki</groupId>
+        <artifactId>bzip2</artifactId>
+        <version>${org.itadaki.bzip2.version}</version>
+      </dependency>
+
+        <!-- UI -->
       <dependency>
         <groupId>org.jfree</groupId>
         <artifactId>jcommon</artifactId>
@@ -1034,6 +1046,8 @@
     <saxon.version>8.7</saxon.version>
     <jna.groupId>net.java.dev.jna</jna.groupId>
     <jna.version>4.0.0</jna.version>
+    <edu.ucar.jj2000.version>5.2</edu.ucar.jj2000.version>
+    <org.itadaki.bzip2.version>0.9.1</org.itadaki.bzip2.version>
 
     <junit.version>4.11</junit.version>
     <jmockit.version>1.11</jmockit.version>

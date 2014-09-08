@@ -44,7 +44,6 @@ import ucar.nc2.grib.grib2.table.NcepLocalTables;
 import ucar.nc2.time.CalendarDate;
 import ucar.nc2.ui.widget.*;
 import ucar.nc2.ui.widget.PopupMenu;
-import ucar.nc2.util.IO;
 import ucar.nc2.util.Misc;
 import ucar.unidata.geoloc.LatLonPoint;
 import ucar.util.prefs.PreferencesExt;
@@ -56,12 +55,9 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.ShortBuffer;
 import java.util.*;
 import java.util.List;
-import java.util.zip.Deflater;
 
 /**
  * Grib2 data reading
@@ -243,7 +239,7 @@ public class Grib2DataPanel extends JPanel {
         Grib2RecordBean bean = (Grib2RecordBean) record2BeanTable.getSelectedBean();
         if (bean != null) {
           Formatter f = new Formatter();
-          calcData(bean, f);
+          GribData.calcScaleOffset(bean, f);
           infoPopup2.setText(f.toString());
           infoPopup2.gotoTop();
           infoWindow2.show();
@@ -387,7 +383,7 @@ public class Grib2DataPanel extends JPanel {
       int id = Grib2CollectionBuilder.cdmVariableHash(cust, gr, 0, false, false, logger);
       Grib2ParameterBean bean = pdsSet.get(id);
       if (bean == null) {
-        bean = new Grib2ParameterBean(gr);
+        bean = new Grib2ParameterBean(gr, id);
         pdsSet.put(id, bean);
         params.add(bean);
       }
@@ -430,7 +426,7 @@ public class Grib2DataPanel extends JPanel {
     return true;
   }     */
 
-  public void showCollection(Formatter f) {
+  public void showInfo(Formatter f) {
     if (dcm == null) {
       if (spec == null) return;
       dcm = scanCollection(spec, f);
@@ -447,19 +443,22 @@ public class Grib2DataPanel extends JPanel {
       e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
     }
 
-    // divided by group
-    Map<Integer, Set<Integer>> groups = new HashMap<>();
+    // show nrecords, data size
+    int nrecords = 0;
+    long dataSize = 0;
+    long msgSize = 0;
     for (Object o : param2BeanTable.getBeans()) {
       Grib2ParameterBean p = (Grib2ParameterBean) o;
-      Set<Integer> group = groups.get(p.getGDS());
-      if (group == null) {
-        group = new TreeSet<>();
-        groups.put(p.getGDS(), group);
+      for (Grib2RecordBean r : p.getRecordBeans()) {
+        nrecords++;
+        dataSize += r.getDataLength();
+        msgSize += r.getGribMsgLength();
       }
-      for (Grib2RecordBean r : p.getRecordBeans())
-        group.add(r.gr.getFile());
     }
+    f.format("nrecords = %d, total grib data size = %d, total grib msg sizes = %d", nrecords, dataSize, msgSize);
   }
+
+  ////////////////////////////////////////////////////////
 
   public void checkProblems(Formatter f) {
     checkDuplicates(f);
@@ -548,6 +547,8 @@ public class Grib2DataPanel extends JPanel {
     }
     f.format("total records = %d%n", total);
   }
+
+  //////////////////////////////
 
   private void writeToFile(List beans) {
 
@@ -744,10 +745,11 @@ public class Grib2DataPanel extends JPanel {
         f.format("%n");
     }
     f.format("%n%n#bits on = %d%n", bits);
-    f.format("bitmap size = %d%n", 8 * count);
+    f.format("total nbits = %d%n", 8 * count);
+    f.format("bitmap nbytes = %d%n", bitmap.length);
   }
 
-  void calcData(Grib2RecordBean bean1, Formatter f) {
+  /* void calcData(Grib2RecordBean bean1, Formatter f) {
     float[] data;
     try {
       data = bean1.readData();
@@ -878,9 +880,9 @@ public class Grib2DataPanel extends JPanel {
 
     } catch (IOException ioe) {
       ioe.printStackTrace();
-    } */
+    }
 
-  }
+  }  */
 
 
 
@@ -959,15 +961,16 @@ public class Grib2DataPanel extends JPanel {
     Grib2Pds pds;
     List<Grib2RecordBean> records;
     int discipline;
-    //long gdsKey;
+    int cdmHash;
 
     // no-arg constructor
 
     public Grib2ParameterBean() {
     }
 
-    public Grib2ParameterBean(Grib2Record r) throws IOException {
+    public Grib2ParameterBean(Grib2Record r, int cdmHash) throws IOException {
       this.gr = r;
+      this.cdmHash = cdmHash;
 
       // long refTime = r.getId().getReferenceDate().getMillis();
       pds = r.getPDSsection().getPDS();
@@ -975,6 +978,10 @@ public class Grib2DataPanel extends JPanel {
       discipline = r.getDiscipline();
       records = new ArrayList<>();
       //gdsKey = r.getGDSsection().calcCRC();
+    }
+
+    public String getCdmHash() {
+      return Integer.toHexString(cdmHash);
     }
 
     void addRecord(Grib2Record r, ucar.unidata.io.RandomAccessFile raf) throws IOException {
@@ -1027,6 +1034,18 @@ public class Grib2DataPanel extends JPanel {
       return minBits+"-"+maxBits;
     }
 
+    public String getScale() {
+      calcBits();
+      Formatter f= new Formatter();
+      if (minScale == Double.MAX_VALUE)
+        f.format("N/A");
+      if (Misc.closeEnough(minScale, maxScale))
+        f.format("%g",minScale);
+      else
+        f.format("(%g,%g)",minScale,maxScale);
+      return f.toString();
+    }
+
     public float getAvgBits() {
       calcBits();
       return avgbits;
@@ -1037,6 +1056,7 @@ public class Grib2DataPanel extends JPanel {
       return compress;
     }
 
+    private double minScale, maxScale;
     private int minBits, maxBits;
     private float nbits = -1;
     private float avgbits;
@@ -1045,10 +1065,16 @@ public class Grib2DataPanel extends JPanel {
       if (nbits >= 0) return;
       nbits = 0;
       int count = 0;
+      minScale = Float.MAX_VALUE;
+      maxScale = -Float.MAX_VALUE;
       minBits = Integer.MAX_VALUE;
       for (Grib2RecordBean bean : records) {
         minBits = Math.min(minBits, bean.getNBits());
         maxBits = Math.max(maxBits, bean.getNBits());
+        if (0 != bean.getNBits()) {
+          minScale = Math.min(minScale, bean.getScale());
+          maxScale = Math.max(maxScale, bean.getScale());
+        }
         nbits += bean.getNBits();
         avgbits += bean.getAvgBits();
         count++;
@@ -1100,12 +1126,15 @@ public class Grib2DataPanel extends JPanel {
 
   ////////////////////////////////////////////////////////
 
-  public class Grib2RecordBean {
+  public class Grib2RecordBean implements GribData.Bean {
     Grib2Record gr;
     Grib2Pds pds;
     Grib2Drs drs;
     Grib2SectionData dataSection;
     long drsLength;
+
+    GribData.Info info;
+    double minimum, maximum, scale;
 
     public Grib2RecordBean() {
     }
@@ -1117,11 +1146,18 @@ public class Grib2DataPanel extends JPanel {
       this.drs = drss.getDrs(raf);
       this.drsLength = drss.getLength(raf);
       this.dataSection = gr.getDataSection();
+
+      info = gr.getBinaryDataInfo(raf);
+
+      double pow10 =  Math.pow(10.0, -getDecimalScale());        // 1/10^D
+      minimum = (float) (pow10 * info.referenceValue);          // R / 10^D
+      scale = (float) (pow10 * Math.pow(2.0, getBinScale()));  // 2^E / 10^D
+
+      double maxPacked = Math.pow(2.0, getNBits()) - 1;
+      maximum = minimum +  scale * maxPacked;
     }
 
-    public String getHeader() {
-      return Grib2Utils.cleanupHeader(gr.getHeader());
-    }
+   // public String getHeader() { return Grib2Utils.cleanupHeader(gr.getHeader()); }
 
     public int getDrsTemplate() {
       return gr.getDataRepresentationSection().getDataTemplate();
@@ -1129,22 +1165,6 @@ public class Grib2DataPanel extends JPanel {
 
     public int getNDataPoints() {
       return gr.getDataRepresentationSection().getDataPoints();
-    }
-
-    public long getDrsLength() {
-      return drsLength;
-    }
-
-    public int getDataLength() {
-      return dataSection.getMsgLength();
-    }
-
-    public long getDataStart() {
-      return dataSection.getStartingPosition();
-    }
-
-    public int getNBits() {
-      return drs.getNBits();
     }
 
     public int getNGroups() {
@@ -1157,8 +1177,42 @@ public class Grib2DataPanel extends JPanel {
       return len * 8 / n;
     }
 
-    public int getDrsHash() {
-      return drs.hashCode();
+    public int getNBits() {
+      return info.numberOfBits;
+    }
+
+    public long getGribMsgLength() {
+      return info.msgLength;
+    }
+
+    public long getDataLength() {
+      return info.dataLength;
+    }
+
+    public int getBinScale() {
+      return info.binaryScaleFactor;
+    }
+
+    public int getDecimalScale() {
+      return info.decimalScaleFactor;
+    }
+
+    public double getMinimum() {
+      return minimum;
+    }
+
+    public double getMaximum() {
+      return maximum;
+    }
+
+    public double getScale() {
+      return scale;
+    }
+
+    public String getPrecision() {
+      Formatter f= new Formatter();
+      f.format("%.5g", scale/2);
+      return f.toString();
     }
 
     public int getBitMap() {
@@ -1169,9 +1223,12 @@ public class Grib2DataPanel extends JPanel {
       return gr.isBmsReplaced();
     }
 
-    public final String getFile() {
-      int fno = gr.getFile();
-      return fileList.get(fno).getName();
+    public long getStartPos() {
+      return gr.getIs().getStartPos();
+    }
+
+    public String getHeader() {
+      return Grib2Utils.cleanupHeader(gr.getHeader());
     }
 
     public final int getTime() {
@@ -1232,7 +1289,7 @@ public class Grib2DataPanel extends JPanel {
       return f.toString();
     }
 
-    float[] readData() throws IOException {
+    public float[] readData() throws IOException {
       ucar.unidata.io.RandomAccessFile raf = getRaf();
       try {
         raf.order(ucar.unidata.io.RandomAccessFile.BIG_ENDIAN);

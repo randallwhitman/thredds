@@ -5,7 +5,7 @@
   <parent>
     <groupId>edu.ucar</groupId>
     <artifactId>thredds-parent</artifactId>
-    <version>4.5.3-SNAPSHOT</version>
+    <version>4.5.4-SNAPSHOT</version>
   </parent>
 
 
@@ -82,9 +82,8 @@
     </dependency>
 
     <dependency>
-	<groupId>edu.ucar</groupId>
-	<artifactId>jj2000</artifactId>
-        <version>5.2-SNAPSHOT</version>
+	  <groupId>edu.ucar</groupId>
+	  <artifactId>jj2000</artifactId>
     </dependency>
 
     <dependency>
@@ -98,6 +97,12 @@
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
       <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.itadaki</groupId>
+      <artifactId>bzip2</artifactId>
+      <version>0.9.1</version>
     </dependency>
 
   </dependencies>

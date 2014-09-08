@@ -18,6 +18,7 @@ import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.dt.GridCoordSystem;
 import ucar.nc2.dt.GridDatatype;
 import ucar.nc2.dt.grid.GridDataset;
+import ucar.nc2.grib.GribData;
 import ucar.nc2.grib.GribStatType;
 import ucar.nc2.grib.GribVariableRenamer;
 import ucar.nc2.grib.collection.GribCdmIndex;
@@ -190,7 +191,8 @@ public class Grib2ReportPanel extends ReportPanel {
     Grib2Drs drs = drss.getDrs(raf);
 
     // calc scale/offset
-    int nbits = drs.getNBits();
+    GribData.Info info = gr.getBinaryDataInfo(raf);
+    int nbits = info.numberOfBits;
     nbitsC.count(nbits);
 
     int width = (2 << (nbits-1)) - 1;
@@ -765,29 +767,36 @@ public class Grib2ReportPanel extends ReportPanel {
   private void doDrsSummaryIndex(Formatter f, MFile mf, boolean extra, Counter templateC, Counter bitmapRepeat, Counter probC) throws IOException {
     Grib2Index index = createIndex(mf, f);
     if (index == null) return;
+    long messageSum = 0;
+    int nrecords = 0;
 
     String path = mf.getPath();
-    RandomAccessFile raf = new RandomAccessFile(path, "r");
+    try (RandomAccessFile raf = new RandomAccessFile(path, "r")) {
 
-    for (ucar.nc2.grib.grib2.Grib2Record gr : index.getRecords()) {
-      Grib2SectionDataRepresentation drss = gr.getDataRepresentationSection();
-      int template = drss.getDataTemplate();
-      templateC.count(template);
+      for (ucar.nc2.grib.grib2.Grib2Record gr : index.getRecords()) {
+        Grib2SectionDataRepresentation drss = gr.getDataRepresentationSection();
+        int template = drss.getDataTemplate();
+        templateC.count(template);
+        messageSum += gr.getIs().getMessageLength();
+        nrecords++;
 
-      //Grib2SectionBitMap bms = gr.getBitmapSection();
-      bitmapRepeat.count(gr.repeat);
+        //Grib2SectionBitMap bms = gr.getBitmapSection();
+        bitmapRepeat.count(gr.repeat);
 
-      if (extra && template == 40) {  // expensive
-        Grib2Drs.Type40 drs40 = gr.readDataTest(raf);
-        if (drs40 != null) {
-          if (drs40.hasSignedProblem())
-            probC.count(1);
-          else
-            probC.count(0);
+        if (extra && template == 40) {  // expensive
+          Grib2Drs.Type40 drs40 = gr.readDataTest(raf);
+          if (drs40 != null) {
+            if (drs40.hasSignedProblem())
+              probC.count(1);
+            else
+              probC.count(0);
+          }
         }
       }
+
+      float percent = ((float) messageSum) / raf.length();
+      f.format("raf length = %d, messageSum = %d, percent = %f nrecords = %d%n", raf.length(), messageSum, percent, nrecords);
     }
-    raf.close();
   }
 
   private void doDrsSummaryScan(Formatter f, MFile mf, boolean extra, Counter templateC, Counter bitmapRepeat, Counter probC, Counter nbitsC) throws IOException {
@@ -809,8 +818,8 @@ public class Grib2ReportPanel extends ReportPanel {
     //Grib2SectionBitMap bms = gr.getBitmapSection();
     bitmapRepeat.count(gr.repeat);
 
-    Grib2Drs gdrs = drss.getDrs(raf);
-    nbitsC.count(gdrs.getNBits());
+    GribData.Info info = gr.getBinaryDataInfo(raf);
+    nbitsC.count(info.numberOfBits);
 
     if (extra && template == 40) {  // expensive
       Grib2Drs.Type40 drs40 = gr.readDataTest(raf);
@@ -822,8 +831,6 @@ public class Grib2ReportPanel extends ReportPanel {
       }
     }
   }
-
-
 
   ///////////////////////////////////////////////
 
