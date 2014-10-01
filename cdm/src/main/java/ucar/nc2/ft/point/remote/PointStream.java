@@ -40,16 +40,17 @@ import ucar.ma2.StructureData;
 import ucar.ma2.StructureDataDeep;
 import ucar.ma2.StructureMembers;
 import ucar.nc2.ft.PointFeature;
+import ucar.nc2.ft.PointFeatureCollection;
+import ucar.nc2.ft.PointFeatureIterator;
 import ucar.nc2.ft.point.PointFeatureImpl;
 import ucar.nc2.stream.NcStream;
+import ucar.nc2.stream.NcStreamProto;
 import ucar.nc2.units.DateUnit;
 import ucar.unidata.geoloc.EarthLocation;
 import ucar.unidata.geoloc.EarthLocationImpl;
 import ucar.unidata.geoloc.Station;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -258,4 +259,59 @@ public class PointStream {
     }
   }
 
+  public static int write(File outFile, PointFeatureCollection pointFeatCol) throws IOException {
+    String name = outFile.getCanonicalPath();
+    String timeUnitString = pointFeatCol.getTimeUnit().getTimeUnitString();
+    PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(-1);
+
+    try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outFile))) {
+      return write(out, pointFeatIter, name, timeUnitString);
+    } finally {
+      pointFeatIter.finish();
+    }
+  }
+
+  // Adapted from thredds.server.cdmremote.PointWriter.WriterNcstream
+  // Caller must iter.finish() and out.close().
+  public static int write(OutputStream out, PointFeatureIterator pointFeatIter, String name, String timeUnitString)
+          throws IOException {
+    int numWritten = 0;
+
+    while (pointFeatIter.hasNext()) {
+      try {
+        PointFeature pointFeat = pointFeatIter.next();
+
+        if (numWritten == 0) {
+          PointStreamProto.PointFeatureCollection protoPfc =
+                  PointStream.encodePointFeatureCollection(name, timeUnitString, pointFeat);
+          byte[] data = protoPfc.toByteArray();
+
+          PointStream.writeMagic(out, MessageType.PointFeatureCollection);
+          NcStream.writeVInt(out, data.length);
+          out.write(data);
+        }
+
+        PointStreamProto.PointFeature protoPointFeat = PointStream.encodePointFeature(pointFeat);
+        byte[] data = protoPointFeat.toByteArray();
+
+        PointStream.writeMagic(out, MessageType.PointFeature);
+        NcStream.writeVInt(out, data.length);
+        out.write(data);
+
+        numWritten++;
+      } catch (Throwable t) {
+        NcStreamProto.Error protoError =
+                NcStream.encodeErrorMessage(t.getMessage() != null ? t.getMessage() : t.getClass().getName());
+        byte[] data = protoError.toByteArray();
+
+        PointStream.writeMagic(out, PointStream.MessageType.Error);
+        NcStream.writeVInt(out, data.length);
+        out.write(data);
+
+        throw new IOException(t);
+      }
+    }
+
+    return numWritten;
+  }
 }
