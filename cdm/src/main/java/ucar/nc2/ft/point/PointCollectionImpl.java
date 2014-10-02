@@ -63,11 +63,6 @@ public abstract class PointCollectionImpl implements PointFeatureCollection {
   protected String altUnits;
   protected List<Variable> extras;
 
-  /* protected PointCollectionImpl(String name) { //}, DateUnit timeUnit, String altUnits) {
-    this.name = name;
-    this.npts = -1;
-  }  */
-
   protected PointCollectionImpl(String name, DateUnit timeUnit, String altUnits) {
     this.name = name;
     this.timeUnit = timeUnit;
@@ -198,5 +193,4 @@ public abstract class PointCollectionImpl implements PointFeatureCollection {
       return new PointIteratorFiltered(from.getPointFeatureIterator(bufferSize), this.boundingBox, this.dateRange);
     }
   }
-
 }

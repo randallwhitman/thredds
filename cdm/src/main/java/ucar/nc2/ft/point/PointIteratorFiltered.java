@@ -52,7 +52,7 @@ public class PointIteratorFiltered extends PointIteratorAbstract {
     private PointFeature pointFeature;
 
     // Originally, this was the only constructor for this class.
-    public PointIteratorFiltered( PointFeatureIterator orgIter, LatLonRect filter_bb, CalendarDateRange filter_date) {
+    public PointIteratorFiltered(PointFeatureIterator orgIter, LatLonRect filter_bb, CalendarDateRange filter_date) {
         this(orgIter, new SpaceAndTimeFilter(filter_bb, filter_date));
     }
 
