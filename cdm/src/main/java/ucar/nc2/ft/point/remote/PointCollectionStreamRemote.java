@@ -9,16 +9,16 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- *
+ * Creates a {@link ucar.nc2.ft.PointFeatureCollection} by reading point stream data from a CDM Remote endpoint.
  *
  * @author cwardgar
  * @since 2014/10/02
  */
-public class RemotePointCollectionFromQuery extends RemotePointCollectionAbstract implements QueryMaker {
+public class PointCollectionStreamRemote extends PointCollectionStreamAbstract implements QueryMaker {
     private final String uri;
     private final QueryMaker queryMaker;
 
-    public RemotePointCollectionFromQuery(String uri, DateUnit timeUnit, String altUnits, QueryMaker queryMaker) {
+    public PointCollectionStreamRemote(String uri, DateUnit timeUnit, String altUnits, QueryMaker queryMaker) {
         super(uri, timeUnit, altUnits);
         this.uri = uri;
         this.queryMaker = (queryMaker == null) ? this : queryMaker;
@@ -38,12 +38,12 @@ public class RemotePointCollectionFromQuery extends RemotePointCollectionAbstrac
 
     @Override
     public PointFeatureCollection subset(LatLonRect boundingBox, CalendarDateRange dateRange) throws IOException {
-        return new PointFeatureCollectionSubset(this, boundingBox, dateRange);
+        return new Subset(this, boundingBox, dateRange);
     }
 
-    private class PointFeatureCollectionSubset extends RemotePointCollectionFromQuery {
-        PointFeatureCollectionSubset(RemotePointCollectionFromQuery from,
-                LatLonRect filter_bb, CalendarDateRange filter_date) throws IOException {
+    private class Subset extends PointCollectionStreamRemote {
+        Subset(PointCollectionStreamRemote from, LatLonRect filter_bb, CalendarDateRange filter_date)
+                throws IOException {
             // Passing null to the queryMaker param causes the default query to be used.
             // The default query will use the boundingBox and dateRange we calculate below.
             super(from.uri, from.getTimeUnit(), from.getAltUnits(), null);

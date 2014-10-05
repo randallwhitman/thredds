@@ -298,7 +298,7 @@ public class PointStream {
         NcStream.writeVInt(out, data.length);
         out.write(data);
 
-        numWritten++;
+        ++numWritten;
       } catch (Throwable t) {
         NcStreamProto.Error protoError =
                 NcStream.encodeErrorMessage(t.getMessage() != null ? t.getMessage() : t.getClass().getName());
