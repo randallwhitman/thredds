@@ -31,6 +31,22 @@ public class PointTestUtil {
     }
 
 
+    public static boolean equals(PointFeatureCollection featColl1, PointFeatureCollection featColl2) throws IOException {
+        if (featColl1 == featColl2) {
+            return true;
+        } else if (featColl1 == null || featColl2 == null) {
+            return false;
+        }
+
+        // TODO: Need to compare the other fields of PointFeatureCollection.
+
+        if (!equals(featColl1.getPointFeatureIterator(-1), featColl2.getPointFeatureIterator(-1))) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static boolean equals(PointFeatureIterator iter1, PointFeatureIterator iter2) throws IOException {
         if (iter1 == iter2) {
             return true;

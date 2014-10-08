@@ -261,7 +261,7 @@ public class PointStream {
 
   public static int write(File outFile, PointFeatureCollection pointFeatCol) throws IOException {
     String name = outFile.getCanonicalPath();
-    String timeUnitString = pointFeatCol.getTimeUnit().getTimeUnitString();
+    String timeUnitString = pointFeatCol.getTimeUnit().getUnitsString();
     PointFeatureIterator pointFeatIter = pointFeatCol.getPointFeatureIterator(-1);
 
     try (BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(outFile))) {
@@ -311,6 +311,8 @@ public class PointStream {
         throw new IOException(t);
       }
     }
+
+    PointStream.writeMagic(out, PointStream.MessageType.End);
 
     return numWritten;
   }

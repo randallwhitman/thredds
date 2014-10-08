@@ -3,7 +3,7 @@ package ucar.nc2.ft.point;
 import com.google.common.collect.Ordering;
 import org.junit.Assert;
 import org.junit.Test;
-import ucar.ma2.StructureData;
+import ucar.ma2.DataType;
 import ucar.ma2.StructureDataScalar;
 import ucar.nc2.ft.FeatureDatasetPoint;
 import ucar.nc2.ft.NoFactoryFoundException;
@@ -18,16 +18,23 @@ import java.util.*;
 public class SortingStationPointFeatureCacheTest {
     @Test
     public void test1() throws Exception {
-        StructureData stationData = new StructureDataScalar("StationFeature");  // leave it empty.
+        StructureDataScalar stationData = new StructureDataScalar("StationFeature");  // leave it empty.
+        stationData.addMemberString("name", null, null, "Foo", 3);
+        stationData.addMemberString("desc", null, null, "Bar", 3);
+        stationData.addMemberString("wmoId", null, null, "123", 3);
+        stationData.addMember("lat", null, "degrees_north", DataType.DOUBLE, false, 30);
+        stationData.addMember("lon", null, "degrees_east", DataType.DOUBLE, false, 60);
+        stationData.addMember("alt", null, "meters", DataType.DOUBLE, false, 5000);
+
         StationFeature stationFeat = new StationFeatureImpl("Foo", "Bar", "123", 30, 60, 5000, 4, stationData);
 
         DateUnit timeUnit = new DateUnit("days since 1970-01-01");
-        StructureData featureData = new StructureDataScalar("StationPointFeature");  // Leave it empty.
 
-        StationPointFeature spf1 = new SimpleStationPointFeature(stationFeat, 5, 5, timeUnit, featureData);
-        StationPointFeature spf2 = new SimpleStationPointFeature(stationFeat, 10, 10, timeUnit, featureData);
-        StationPointFeature spf3 = new SimpleStationPointFeature(stationFeat, 15, 15, timeUnit, featureData);
-        StationPointFeature spf4 = new SimpleStationPointFeature(stationFeat, 20, 20, timeUnit, featureData);
+        List<StationPointFeature> spfList = new ArrayList<>();
+        spfList.add(makeStationPointFeature(stationFeat, timeUnit, 10, 10, 103));
+        spfList.add(makeStationPointFeature(stationFeat, timeUnit, 20, 20, 96));
+        spfList.add(makeStationPointFeature(stationFeat, timeUnit, 30, 30, 118));
+        spfList.add(makeStationPointFeature(stationFeat, timeUnit, 40, 40, 110));
 
         Comparator<StationPointFeature> revObsTimeComp = new Comparator<StationPointFeature>() {
             @Override
@@ -37,7 +44,6 @@ public class SortingStationPointFeatureCacheTest {
         };
 
         SortingStationPointFeatureCache cache = new SortingStationPointFeatureCache(revObsTimeComp);
-        List<StationPointFeature> spfList = Arrays.asList(spf1, spf2, spf3, spf4);
 
         for (StationPointFeature stationPointFeat : spfList) {
             cache.add(stationPointFeat);
@@ -46,6 +52,16 @@ public class SortingStationPointFeatureCacheTest {
         Collections.reverse(spfList);
         Assert.assertTrue(
                 PointTestUtil.equals(new PointIteratorAdapter(spfList.iterator()), cache.getPointFeatureIterator()));
+    }
+
+    private static StationPointFeature makeStationPointFeature(
+            StationFeature stationFeat, DateUnit timeUnit, double obsTime, double nomTime, double tasmax) {
+        StructureDataScalar featureData = new StructureDataScalar("StationPointFeature");
+        featureData.addMember("obsTime", "Observation time", timeUnit.getUnitsString(), DataType.DOUBLE, false, obsTime);
+        featureData.addMember("nomTime", "Nominal time", timeUnit.getUnitsString(), DataType.DOUBLE, false, nomTime);
+        featureData.addMember("tasmax", "Max temperature", "Celsius", DataType.DOUBLE, false, tasmax);
+
+        return new SimpleStationPointFeature(stationFeat, obsTime, nomTime, timeUnit, featureData);
     }
 
     @Test
