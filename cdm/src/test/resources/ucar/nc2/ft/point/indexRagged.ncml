@@ -31,6 +31,15 @@
         <attribute name="units" value="degrees_north"/>
         <values>15 30 45</values>
     </variable>
+
+    <variable name="alt" shape="station" type="float">
+        <attribute name="long_name" value="vertical distance above the surface"/>
+        <attribute name="standard_name" value="height"/>
+        <attribute name="units" value="feet"/>
+        <attribute name="positive" value="up"/>
+        <attribute name="axis" value="Z"/>
+        <values>1894 266 5280</values>
+    </variable>
 	
     <variable name="humidity" shape="obs" type="float">
         <attribute name="standard_name" value="specific_humidity"/>

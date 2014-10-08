@@ -23,8 +23,6 @@ public class PointIteratorFilteredTest {
     @Test
     public void timeSpaceFilter() throws NoFactoryFoundException, IOException, URISyntaxException {
         try (FeatureDatasetPoint fdPoint = PointTestUtil.openPointDataset("pointsToFilter.ncml")) {
-            PointFeatureIterator pointIter = new PointDatasetIterator(fdPoint);
-
             double latMin = +10.0;
             double latMax = +50.0;
             double lonMin = -60.0;
@@ -37,7 +35,10 @@ public class PointIteratorFilteredTest {
             CalendarDate end = calDateUnit.makeCalendarDate(130);
             CalendarDateRange filter_date = CalendarDateRange.of(start, end);
 
-            PointFeatureIterator pointIterFiltered = new PointIteratorFiltered(pointIter, filter_bb, filter_date);
+            PointFeatureCollection flattenedDatasetCol = new FlattenedDatasetPointCollection(fdPoint);
+            PointFeatureIterator pointIterOrig = flattenedDatasetCol.getPointFeatureIterator(-1);
+            PointFeatureIterator pointIterFiltered = new PointIteratorFiltered(pointIterOrig, filter_bb, filter_date);
+
             List<String> expectedIdsOfFilteredPoints = Arrays.asList("B", "E");
             List<String> actualIdsOfFilteredPoints = new LinkedList<>();
 

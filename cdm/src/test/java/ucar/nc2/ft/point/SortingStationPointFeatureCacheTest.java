@@ -104,8 +104,10 @@ public class SortingStationPointFeatureCacheTest {
                 FeatureDatasetPoint fdExpected = PointTestUtil.openPointDataset("cacheTestExpected1.ncml")) {
             cache.addAll(fdInput);
 
-            Assert.assertTrue(
-                    PointTestUtil.equals(new PointDatasetIterator(fdExpected), cache.getPointFeatureIterator()));
+            PointFeatureIterator pointIterExpected =
+                    new FlattenedDatasetPointCollection(fdExpected).getPointFeatureIterator(-1);
+            PointFeatureIterator pointIterActual = cache.getPointFeatureIterator();
+            Assert.assertTrue(PointTestUtil.equals(pointIterExpected, pointIterActual));
         }
     }
 }

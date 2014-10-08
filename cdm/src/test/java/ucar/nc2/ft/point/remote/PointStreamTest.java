@@ -4,12 +4,12 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import ucar.ma2.DataType;
-import ucar.ma2.StructureData;
 import ucar.ma2.StructureDataScalar;
-import ucar.ma2.StructureMembers;
+import ucar.nc2.ft.FeatureDatasetPoint;
+import ucar.nc2.ft.NoFactoryFoundException;
 import ucar.nc2.ft.PointFeature;
 import ucar.nc2.ft.PointFeatureCollection;
-import ucar.nc2.ft.PointFeatureIterator;
+import ucar.nc2.ft.point.FlattenedDatasetPointCollection;
 import ucar.nc2.ft.point.PointTestUtil;
 import ucar.nc2.ft.point.SimplePointFeature;
 import ucar.nc2.ft.point.SimplePointFeatureCollection;
@@ -20,6 +20,7 @@ import ucar.units.UnitException;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 public class PointStreamTest {
     private static DateUnit timeUnit;
@@ -30,38 +31,25 @@ public class PointStreamTest {
     }
 
     @Test
-    public void testIO() throws IOException {
-        SimplePointFeatureCollection pointCollOut = new SimplePointFeatureCollection("PointStreamTest", timeUnit, "m");
-        pointCollOut.add(makePointFeature(30, 40, 5000, 0, 114.9));
-        pointCollOut.add(makePointFeature(40, 60, 397, 365, 98.2));
-        pointCollOut.add(makePointFeature(50, 80, 2525, 730, 201.6));
-        pointCollOut.add(makePointFeature(60, 100, 4119, 1096, 144.8));
-        pointCollOut.add(makePointFeature(70, 120, 72, 1461, 88.7));
+    public void testIo1() throws IOException {
+        File outFile = new File("C:/Users/cwardgar/Desktop/out1.txt");
 
-        File outFile = new File("C:/Users/cwardgar/Desktop/out.txt");
+        SimplePointFeatureCollection pointCollOut = new SimplePointFeatureCollection("PointStreamTest", timeUnit, "m");
+        pointCollOut.add(makePointFeature(outFile, 30, 40, 5000, 0, 114.9));
+        pointCollOut.add(makePointFeature(outFile, 40, 60, 397, 365, 98.2));
+        pointCollOut.add(makePointFeature(outFile, 50, 80, 2525, 730, 201.6));
+        pointCollOut.add(makePointFeature(outFile, 60, 100, 4119, 1096, 144.8));
+        pointCollOut.add(makePointFeature(outFile, 70, 120, 72, 1461, 88.7));
+
         PointStream.write(outFile, pointCollOut);
 
         PointFeatureCollection pointCollIn = new PointCollectionStreamLocal(outFile);
         Assert.assertTrue(PointTestUtil.equals(pointCollOut, pointCollIn));
     }
 
-    private static void writeFeatureCollection(PointFeatureCollection pointFeatColl) throws IOException {
-        PointFeatureIterator iter = pointFeatColl.getPointFeatureIterator(-1);
-        while (iter.hasNext()) {
-            PointFeature pointFeat = iter.next();
-            StructureData data = pointFeat.getFeatureData();
-
-            for (StructureMembers.Member member : data.getStructureMembers().getMembers()) {
-                System.out.println(member.getName() + "\t\t" + data.getArray(member));
-            }
-
-            System.out.println();
-        }
-    }
-
     private static PointFeature makePointFeature(
-            double lat, double lon, double alt, double time, double tasmax) {
-        StructureDataScalar featureData = new StructureDataScalar("StationPointFeature");
+            File outFile, double lat, double lon, double alt, double time, double tasmax) {
+        StructureDataScalar featureData = new StructureDataScalar(outFile.getAbsolutePath());
         featureData.addMember("lat", "Latidue", "degrees_north", DataType.DOUBLE, false, lat);
         featureData.addMember("lon", "Longitude", "degrees_east", DataType.DOUBLE, false, lon);
         featureData.addMember("alt", "Altitude", "meters", DataType.DOUBLE, false, alt);
@@ -71,5 +59,18 @@ public class PointStreamTest {
 
         EarthLocation loc = new EarthLocationImpl(lat, lon, alt);
         return new SimplePointFeature(loc, time, time, timeUnit, featureData);
+    }
+
+    @Test
+    public void testIo2() throws NoFactoryFoundException, IOException, URISyntaxException {
+        File outFile = new File("C:/Users/cwardgar/Desktop/out2.txt");
+
+        try (FeatureDatasetPoint fdPoint = PointTestUtil.openPointDataset("pointsToFilter.ncml")) {
+            PointFeatureCollection origPointCol = new FlattenedDatasetPointCollection(fdPoint);
+            PointStream.write(outFile, origPointCol);
+
+            PointFeatureCollection roundTrippedPointCol = new PointCollectionStreamLocal(outFile);
+            Assert.assertTrue(PointTestUtil.equals(origPointCol, roundTrippedPointCol));
+        }
     }
 }

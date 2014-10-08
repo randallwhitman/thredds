@@ -1,6 +1,8 @@
 package ucar.nc2.ft.point;
 
 import com.google.common.math.DoubleMath;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.MAMath;
 import ucar.ma2.StructureData;
@@ -22,12 +24,28 @@ import java.util.Objects;
  * @since 2014/08/28
  */
 public class PointTestUtil {
+    private static final Logger logger = LoggerFactory.getLogger(PointTestUtil.class);
+
     // Can be used to open datasets in /thredds/cdm/src/test/resources/ucar/nc2/ft/point
     public static FeatureDatasetPoint openPointDataset(String resource)
             throws IOException, NoFactoryFoundException, URISyntaxException {
         File file = new File(PointTestUtil.class.getResource(resource).toURI());
         return (FeatureDatasetPoint) FeatureDatasetFactoryManager.open(
                 FeatureType.ANY_POINT, file.getAbsolutePath(), null);
+    }
+
+    public static void writeFeatureCollection(PointFeatureCollection pointFeatColl) throws IOException {
+        PointFeatureIterator iter = pointFeatColl.getPointFeatureIterator(-1);
+        while (iter.hasNext()) {
+            PointFeature pointFeat = iter.next();
+            StructureData data = pointFeat.getFeatureData();
+
+            for (StructureMembers.Member member : data.getStructureMembers().getMembers()) {
+                System.out.println(member.getName() + "\t\t" + data.getArray(member));
+            }
+
+            System.out.println();
+        }
     }
 
 
@@ -76,7 +94,7 @@ public class PointTestUtil {
             return false;
         }
 
-        if (!equals((PointFeature) stationPointFeat1, (PointFeature) stationPointFeat2)) {
+        if (!equals((PointFeature) stationPointFeat1, stationPointFeat2)) {
             return false;
         } else if (!equals(stationPointFeat1.getStation(), stationPointFeat2.getStation())) {
             return false;
@@ -92,7 +110,7 @@ public class PointTestUtil {
             return false;
         }
 
-        if (!equals((Station) stationFeat1, (Station) stationFeat2)) {
+        if (!equals((Station) stationFeat1, stationFeat2)) {
             return false;
         } else if (!equals(stationFeat1.getFeatureData(), stationFeat2.getFeatureData())) {
             return false;
@@ -108,7 +126,7 @@ public class PointTestUtil {
             return false;
         }
 
-        if (!equals((EarthLocation) station1, (EarthLocation) station2)) {
+        if (!equals((EarthLocation) station1, station2)) {
             return false;
         } else if (!Objects.deepEquals(station1.getName(), station2.getName())) {
             return false;

@@ -14,7 +14,7 @@
     <variable name="time" shape="time" type="double">
         <attribute name="standard_name" value="time"/>
         <attribute name="long_name" value="time of measurement"/>
-        <attribute name="units" value="days since 1970-01-01 00:00:00"/>
+        <attribute name="units" value="d since 1970-01-01 00:00:00"/>
         <values>90</values>
     </variable>
 	
@@ -30,6 +30,15 @@
         <attribute name="long_name" value="station latitude"/>
         <attribute name="units" value="degrees_north"/>
         <values>-75 -60 -45</values>
+    </variable>
+
+    <variable name="alt" shape="station" type="float">
+        <attribute name="long_name" value="vertical distance above the surface"/>
+        <attribute name="standard_name" value="height"/>
+        <attribute name="units" value="yard"/>
+        <attribute name="positive" value="up"/>
+        <attribute name="axis" value="Z"/>
+        <values>630 94 1760</values>
     </variable>
 	
     <variable name="humidity" shape="station time" type="float">
