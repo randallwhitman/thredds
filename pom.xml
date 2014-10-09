@@ -1011,7 +1011,7 @@
     <cas.version>3.1.10</cas.version>
     <cglib.version>2.2</cglib.version>
     <com.google.guava.version>18.0</com.google.guava.version>
-    <com.google.protobuf.version>2.5.0</com.google.protobuf.version>
+    <com.google.protobuf.version>2.6.0</com.google.protobuf.version>
     <com.jgoodies.version>1.6.0</com.jgoodies.version>
     <com.sleepycat.version>4.0.92</com.sleepycat.version>
     <commons-dbcp.version>1.4</commons-dbcp.version>

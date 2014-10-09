@@ -1,8 +1,6 @@
 package ucar.nc2.ft.point;
 
 import com.google.common.math.DoubleMath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import ucar.ma2.Array;
 import ucar.ma2.MAMath;
 import ucar.ma2.StructureData;
@@ -24,8 +22,6 @@ import java.util.Objects;
  * @since 2014/08/28
  */
 public class PointTestUtil {
-    private static final Logger logger = LoggerFactory.getLogger(PointTestUtil.class);
-
     // Can be used to open datasets in /thredds/cdm/src/test/resources/ucar/nc2/ft/point
     public static FeatureDatasetPoint openPointDataset(String resource)
             throws IOException, NoFactoryFoundException, URISyntaxException {
@@ -49,18 +45,31 @@ public class PointTestUtil {
     }
 
 
-    public static boolean equals(PointFeatureCollection featColl1, PointFeatureCollection featColl2) throws IOException {
-        if (featColl1 == featColl2) {
+    public static boolean equals(PointFeatureCollection featCol1, PointFeatureCollection featCol2) throws IOException {
+        if (featCol1 == featCol2) {
             return true;
-        } else if (featColl1 == null || featColl2 == null) {
+        } else if (featCol1 == null || featCol2 == null) {
             return false;
         }
 
-        // TODO: Need to compare the other fields of PointFeatureCollection.
-
-        if (!equals(featColl1.getPointFeatureIterator(-1), featColl2.getPointFeatureIterator(-1))) {
+        // We must do this comparison first because some PointFeatureCollection implementations, e.g.
+        // PointCollectionStreamAbstract, won't have final values for getTimeUnit() and getAltUnits() until
+        // getPointFeatureIterator() is called.
+        if (!equals(featCol1.getPointFeatureIterator(-1), featCol2.getPointFeatureIterator(-1))) {
             return false;
         }
+
+        if (!Objects.deepEquals(featCol1.getCollectionFeatureType(), featCol2.getCollectionFeatureType())) {
+            return false;
+        } else if (!Objects.deepEquals(featCol1.getTimeUnit().getUnitsString(), featCol2.getTimeUnit().getUnitsString())) {
+            return false;
+        } else if (!Objects.deepEquals(featCol1.getAltUnits(), featCol2.getAltUnits())) {
+            return false;
+        }
+
+        // We don't care about FeatureCollection.getName(); it's an implementation detail.
+        // We're also not going to worry about getExtraVariables(), since that method will likely be moved to
+        // FeatureDatasetPoint in NetCDF-Java 5.0.
 
         return true;
     }
@@ -217,14 +226,13 @@ public class PointTestUtil {
             return false;
         }
 
-        if (!Objects.deepEquals(members1.getName(), members2.getName())) {
-            return false;
-        } else if (!equals(members1.getMembers(), members2.getMembers())) {
+        if (!equals(members1.getMembers(), members2.getMembers())) {
             return false;
         } else if (!Objects.deepEquals(members1.getStructureSize(), members2.getStructureSize())) {
-          return false;
+            return false;
         }
-        // StructureMembers.memberHash is derived from StructureMembers.members; no need to test it.
+        // We don't care about StructureMembers.getName(); it's an implementation detail.
+        // Also, StructureMembers.memberHash is derived from StructureMembers.members; no need to test it.
 
         return true;
     }

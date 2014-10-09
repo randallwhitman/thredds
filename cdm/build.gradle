@@ -34,7 +34,7 @@ dependencies {
   compile project(':udunits')
   compile project(':httpservices')
   compile ('org.apache.httpcomponents:httpcore:4.2.5')
-  compile 'com.google.protobuf:protobuf-java:2.5.0'
+  compile 'com.google.protobuf:protobuf-java:2.6.0'
   compile 'com.google.guava:guava:17.0'
   compile 'joda-time:joda-time:2.2'
   compile 'net.jcip:jcip-annotations:1.0'

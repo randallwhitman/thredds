@@ -34,7 +34,7 @@
     </variable>
 
     <variable name="id" shape="obs id_strlen" type="char">
-        <attribute name="coordinates" value="time lat lon"/>
+        <attribute name="coordinates" value="time lat lon alt"/>
         <values>ABCDEF</values>
     </variable>
 
