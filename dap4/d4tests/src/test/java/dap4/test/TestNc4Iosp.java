@@ -2,7 +2,6 @@ package dap4.test;
 
 import dap4.core.util.DapException;
 import dap4.servlet.CDMDSP;
-import dap4.test.util.DapTestCommon;
 import ucar.nc2.dataset.NetcdfDataset;
 
 import java.io.*;
@@ -107,7 +106,6 @@ public class TestNc4Iosp extends DapTestCommon
         throws Exception
     {
         super(name);
-        setSystemProperties();
         if(!HDF5) {
             CDMDSP.loadNc4Iosp();  // Load Nc4Iosp
         }

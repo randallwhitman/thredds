@@ -3,10 +3,7 @@ package dap4.test;
 import dap4.dap4shared.ChunkInputStream;
 import dap4.core.util.DapDump;
 import dap4.dap4shared.RequestMode;
-import dap4.servlet.DapCache;
-import dap4.servlet.Generator;
-import dap4.test.servlet.*;
-import dap4.test.util.*;
+import dap4.servlet.*;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -14,6 +11,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.junit.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * TestServlet has multiple purposes.
@@ -30,15 +31,12 @@ public class TestServlet extends DapTestCommon
     //////////////////////////////////////////////////
     // Constants
 
-    static protected String DATADIR = "d4tests/src/test/data"; // relative to dap4 root
-    static protected String TESTDATADIR = DATADIR + "/resources";
-    static protected String BASELINEDIR = DATADIR + "/resources/TestServlet/baseline";
-    static protected String TESTINPUTDIR = DATADIR + "/resources/testfiles";
-
-    static protected String GENERATEDIR = TESTDATADIR + "/TestCDMClient/testinput";
+    static protected final String TESTINPUTDIR = "/testfiles";
+    static protected final String BASELINEDIR = "/TestServlet/baseline";
+    static protected final String GENERATEDIR = "/TestCDMClient/testinput";
 
     // constants for Fake Request
-    static protected String FAKEURLPREFIX = "http://localhost:8080/d4ts";
+    static protected final String FAKEURLPREFIX = "http://localhost:8080/dap4";
 
     static protected final BigInteger MASK = new BigInteger("FFFFFFFFFFFFFFFF", 16);
 
@@ -50,7 +48,17 @@ public class TestServlet extends DapTestCommon
 
     static protected class ServletTest
     {
-        static String root = null;
+        static String inputroot = null;
+        static String baselineroot = null;
+        static String generateroot = null;
+
+        static public void
+        setRoots(String input, String baseline, String generate)
+        {
+            inputroot = input;
+            baselineroot = baseline;
+            generateroot = generate;
+        }
 
         String title;
         String dataset;
@@ -83,17 +91,15 @@ public class TestServlet extends DapTestCommon
             this.template = template;
             this.xfail = xfail;
             this.checksumming = checksumming;
-            this.testinputpath
-                = root + "/" + TESTINPUTDIR + "/" + dataset;
-            this.baselinepath
-                = root + "/" + BASELINEDIR + "/" + dataset;
-            this.generatepath
-                = root + "/" + GENERATEDIR + "/" + dataset;
+            this.testinputpath = canonjoin(this.inputroot, dataset);
+            this.baselinepath = canonjoin(this.baselineroot, dataset);
+            this.generatepath = canonjoin(this.generateroot, dataset);
         }
+
 
         String makeurl(RequestMode ext)
         {
-            return FAKEURLPREFIX + "/" + dataset + "." + ext.toString();
+            return canonjoin(FAKEURLPREFIX,canonjoin(TESTINPUTDIR,dataset)) + "." + ext.toString();
         }
 
         public String toString()
@@ -139,41 +145,30 @@ public class TestServlet extends DapTestCommon
 
     protected List<ServletTest> chosentests = new ArrayList<ServletTest>();
 
-    protected String datasetpath = null;
-
-    protected String root = null;
 
     //////////////////////////////////////////////////
     // Constructor(s)
 
     public TestServlet()
-        throws Exception
     {
         this("TestServlet");
     }
 
     public TestServlet(String name)
-        throws Exception
     {
         this(name, null);
     }
 
     public TestServlet(String name, String[] argv)
-        throws Exception
     {
         super(name);
-        setSystemProperties();
         if(prop_ascii)
             Generator.setASCII(true);
-
-        this.root = getDAP4Root();
-        if(this.root == null)
-            throw new Exception("dap4 root not found");
-
-        this.datasetpath = this.root + "/" + DATADIR;
-        defineAllTestcases(this.root);
+        ServletTest.setRoots(canonjoin(getResourceDir(), TESTINPUTDIR),
+        canonjoin(getResourceDir(), BASELINEDIR),
+        canonjoin(getResourceDir(), GENERATEDIR));
+        defineAllTestcases();
         chooseTestcases();
-        generatesetup();
     }
 
     //////////////////////////////////////////////////
@@ -183,7 +178,8 @@ public class TestServlet extends DapTestCommon
     chooseTestcases()
     {
         if(false) {
-            chosentests = locate("test_struct_type.nc");
+            chosentests = locate("test_fill.nc");
+            prop_visual = true;
         } else {
             for(ServletTest tc : alltestcases) {
                 chosentests.add(tc);
@@ -192,39 +188,35 @@ public class TestServlet extends DapTestCommon
     }
 
     protected void
-    defineAllTestcases(String root)
+    defineAllTestcases()
     {
-        ServletTest.root = root;
         this.alltestcases.add(
-            new ServletTest("test_sequence_1.syn", "dmr,dap", true,  //0
+            new ServletTest("tst_fills.nc", "dmr,dap", true,  //0
                 // S4
                 new Dump.Commands()
                 {
                     public void run(Dump printer) throws IOException
                     {
-                        int count = printer.printcount();
-                        for(int j = 0;j < count;j++) {
-                            printer.printvalue('S', 4);
-                            printer.printvalue('S', 2);
-                        }
+                        printer.printvalue('U', 1);
+                        printer.printchecksum();
+                        printer.printvalue('S', 2);
+                        printer.printchecksum();
+                        printer.printvalue('U', 4);
                         printer.printchecksum();
                     }
                 }));
         this.alltestcases.add(
-            new ServletTest("test_sequence_2.syn", "dmr,dap", true,  //0
+            new ServletTest("test_fill.nc", "dmr,dap", true,  //0
                 // S4
                 new Dump.Commands()
                 {
                     public void run(Dump printer) throws IOException
                     {
-                        for(int i = 0;i < 2;i++) {
-                            int count = printer.printcount();
-                            for(int j = 0;j < count;j++) {
-                                printer.printvalue('S', 4);
-                                printer.printvalue('S', 2);
-                            }
-                            printer.newline();
-                        }
+                        printer.printvalue('U', 1);
+                        printer.printchecksum();
+                        printer.printvalue('S', 2);
+                        printer.printchecksum();
+                        printer.printvalue('U', 4);
                         printer.printchecksum();
                     }
                 }));
@@ -251,18 +243,18 @@ public class TestServlet extends DapTestCommon
                     }
                 }));
         this.alltestcases.add(
-                    new ServletTest("test_opaque_array.nc", "dmr,dap", true,  //0
-                        // S4
-                        new Dump.Commands()
-                        {
-                            public void run(Dump printer) throws IOException
-                            {
-                                for(int i = 0;i < 4;i++) {
-                                    printer.printvalue('O', 0, i);
-                                }
-                                printer.printchecksum();
-                            }
-                        }));
+            new ServletTest("test_opaque_array.nc", "dmr,dap", true,  //0
+                // S4
+                new Dump.Commands()
+                {
+                    public void run(Dump printer) throws IOException
+                    {
+                        for(int i = 0;i < 4;i++) {
+                            printer.printvalue('O', 0, i);
+                        }
+                        printer.printchecksum();
+                    }
+                }));
         this.alltestcases.add(
             new ServletTest("test_one_vararray.nc", "dmr,dap", true,  //1
                 // S4
@@ -287,16 +279,16 @@ public class TestServlet extends DapTestCommon
                     }
                 }));
         this.alltestcases.add(
-                    new ServletTest("test_enum_2.nc", "dmr,dap", true,   //
-                        // S1
-                        new Dump.Commands()
-                        {
-                            public void run(Dump printer) throws IOException
-                            {
-                                printer.printvalue('S', 1);
-                                printer.printchecksum();
-                            }
-                        }));
+            new ServletTest("test_enum_2.nc", "dmr,dap", true,   //
+                // S1
+                new Dump.Commands()
+                {
+                    public void run(Dump printer) throws IOException
+                    {
+                        printer.printvalue('S', 1);
+                        printer.printchecksum();
+                    }
+                }));
         this.alltestcases.add(
             new ServletTest("test_enum_array.nc", "dmr,dap", true, //3
                 // 5 S1
@@ -463,6 +455,39 @@ public class TestServlet extends DapTestCommon
                     public void run(Dump printer) throws IOException
                     {
                         printer.printvalue('S', 4);
+                        printer.printchecksum();
+                    }
+                }));
+        this.alltestcases.add(
+            new ServletTest("test_sequence_1.syn", "dmr,dap", true,  //0
+                // S4
+                new Dump.Commands()
+                {
+                    public void run(Dump printer) throws IOException
+                    {
+                        int count = printer.printcount();
+                        for(int j = 0;j < count;j++) {
+                            printer.printvalue('S', 4);
+                            printer.printvalue('S', 2);
+                        }
+                        printer.printchecksum();
+                    }
+                }));
+        this.alltestcases.add(
+            new ServletTest("test_sequence_2.syn", "dmr,dap", true,  //0
+                // S4
+                new Dump.Commands()
+                {
+                    public void run(Dump printer) throws IOException
+                    {
+                        for(int i = 0;i < 2;i++) {
+                            int count = printer.printcount();
+                            for(int j = 0;j < count;j++) {
+                                printer.printvalue('S', 4);
+                                printer.printvalue('S', 2);
+                            }
+                            printer.newline();
+                        }
                         printer.printchecksum();
                     }
                 }));
@@ -668,7 +693,7 @@ public class TestServlet extends DapTestCommon
 
     //////////////////////////////////////////////////
     // Junit test methods
-
+    @Test
     public void testServlet()
         throws Exception
     {
@@ -711,16 +736,12 @@ public class TestServlet extends DapTestCommon
         throws Exception
     {
         boolean pass = true;
-
         // Create request and response objects
-        FakeServlet servlet = new FakeServlet(this.datasetpath);
-        FakeServletRequest req = new FakeServletRequest(testcase.makeurl(RequestMode.DMR), servlet);
-        FakeServletResponse resp = new FakeServletResponse();
-        servlet.init();
+	    Mocker mocker = new Mocker("dap4",testcase.makeurl(RequestMode.DMR),this);
 
         // See if the servlet can process this
         try {
-            servlet.doGet(req, resp);
+            mocker.controller.handleRequest(mocker.req, mocker.resp);
         } catch (Throwable t) {
             System.out.println(testcase.xfail ? "XFail" : "Fail");
             t.printStackTrace();
@@ -728,8 +749,7 @@ public class TestServlet extends DapTestCommon
         }
 
         // Collect the output
-        FakeServletOutputStream fakestream = (FakeServletOutputStream) resp.getOutputStream();
-        byte[] byteresult = fakestream.toArray();
+        byte[] byteresult = mocker.resp.getContentAsByteArray();
 
         // Test by converting the raw output to a string
 
@@ -754,32 +774,22 @@ public class TestServlet extends DapTestCommon
     {
         boolean pass = true;
         String baseline;
-        RequestMode ext = RequestMode.DAP;
-
         // Create request and response objects
-        FakeServlet servlet = new FakeServlet(this.datasetpath);
-        String methodurl = testcase.makeurl(RequestMode.DAP);
-        FakeServletRequest req = new FakeServletRequest(methodurl, servlet);
-        FakeServletResponse resp = new FakeServletResponse();
-
-        servlet.init();
+	    Mocker mocker = new Mocker("dap4",testcase.makeurl(RequestMode.DAP),this);
+        byte[] byteresult = null; // output
 
         // See if the servlet can process this
         try {
-            servlet.doGet(req, resp);
+            byteresult = mocker.execute();
         } catch (Throwable t) {
             System.out.println(testcase.xfail ? "XFail" : "Fail");
             t.printStackTrace();
             return testcase.xfail;
         }
 
-        // Collect the output
-        FakeServletOutputStream fakestream
-            = (FakeServletOutputStream) resp.getOutputStream();
         if(prop_debug || DEBUG) {
-            DapDump.dumpbytestream(fakestream.byteStream(),ByteOrder.nativeOrder(),"TestServlet.dodata");
+            DapDump.dumpbytestream(byteresult, ByteOrder.nativeOrder(), "TestServlet.dodata");
         }
-        byte[] byteresult = fakestream.toArray();
 
         if(!testcase.xfail && prop_generate) {
             // Dump the serialization into a file; this also includes the dmr
@@ -790,7 +800,7 @@ public class TestServlet extends DapTestCommon
         if(DEBUG) {
             System.out.println("///////////////////");
             ByteBuffer datab = ByteBuffer.wrap(byteresult).order(ByteOrder.nativeOrder());
-            DapDump.dumpbytes(datab,true);
+            DapDump.dumpbytes(datab, true);
             System.out.println("///////////////////");
             System.out.flush();
         }
@@ -827,13 +837,13 @@ public class TestServlet extends DapTestCommon
 
     //////////////////////////////////////////////////
     // Utility methods
-
+    /*
     boolean
     generatesetup()
     {
         if(!prop_generate)
             return false;
-        File genpath = new File(root + "/" + GENERATEDIR);
+        File genpath = new File(this.root + "/" + GENERATEDIR);
         if(!genpath.exists()) {// create generate dir if it does not exist
             if(!genpath.mkdirs())
                 return report("Cannot create: " + genpath.toString());
@@ -842,9 +852,10 @@ public class TestServlet extends DapTestCommon
         else if(!genpath.canWrite())
             return report("Directory not writeable: " + genpath.toString());
         // Clear the generate directory, but of files only
-        clearDir(genpath, false);
+        //clearDir(genpath, false);
         return true;
     }
+    */
 
     boolean
     report(String msg)

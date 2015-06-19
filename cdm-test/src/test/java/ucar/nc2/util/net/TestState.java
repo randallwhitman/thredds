@@ -37,12 +37,9 @@ import ucar.httpservices.*;
 import org.junit.Test;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
-import java.io.*;
 import java.nio.charset.Charset;
-
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
 
 /**
  * Test the proper state transitions of HTTPSession
@@ -59,7 +56,7 @@ public class TestState extends UnitTestCommon
 {
     //////////////////////////////////////////////////
     // Constants
-    protected final String SESSIONURL = "http://"+ TestDir.remoteTestServer+"/dts";
+    protected final String SESSIONURL = "http://"+ TestDir.dap2TestServer+"/dts";
     protected final String TESTSOURCE1 = SESSIONURL + "/test.01.dds";
     protected final String TESTSOURCE2 = SESSIONURL + "/test.02.dds";
 
@@ -80,8 +77,9 @@ public class TestState extends UnitTestCommon
     testState()
         throws Exception
     {
+        ThreddsServer.REMOTETEST.assumeIsAvailable();
         int status = 0;
-        HTTPSession session = HTTPFactory.newSession(SESSIONURL);
+        HTTPSession session = HTTPFactory.newSession(SESSIONURL); // do NOT use try(){}
         assertFalse(session.isClosed());
 
         // Check state transitions for open and execute

@@ -32,15 +32,15 @@
 
 package ucar.nc2.util.net;
 
-import ucar.httpservices.*;
-
-import org.junit.Test;
+import ucar.httpservices.HTTPException;
+import ucar.httpservices.HTTPFactory;
+import ucar.httpservices.HTTPMethod;
+import ucar.httpservices.HTTPSession;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.InputStream;
-
-import static junit.framework.Assert.assertTrue;
 
 public class TestHTTPMethod extends UnitTestCommon
 {
@@ -48,7 +48,7 @@ public class TestHTTPMethod extends UnitTestCommon
     //////////////////////////////////////////////////
     // Constants
 
-    protected final String baseurl = "http://"+ TestDir.remoteTestServer+"/dts";
+    protected final String baseurl = "http://"+ TestDir.dap2TestServer+"/dts";
     static String relativebaseline = "/cdm/src/test/data/ucar/nc2/util/net";
 
     static final String testcase = "test.01.dds";
@@ -76,63 +76,61 @@ public class TestHTTPMethod extends UnitTestCommon
         setTitle("HTTP Method tests");
     }
 
+    @Override
+    public void setUp() {
+        ThreddsServer.REMOTETEST.assumeIsAvailable();
+    }
+
     public void
     testGetStream() throws Exception
     {
-        HTTPSession session = null;
-        HTTPMethod method = null;
-
         String url = baseurl + "/" + testcase;
-        String baseline = threddsRoot + relativebaseline + "/" + testcase;
+        String baseline = getThreddsroot() + relativebaseline + "/" + testcase;
 
         System.out.println("*** Testing: HTTPMethod");
         System.out.println("*** URL: " + url);
 
         System.out.println("*** Testing: HTTPMethod.getResponseBodyAsStream");
-        session = HTTPFactory.newSession(url);
-        method = HTTPFactory.Get(session);
-        method.execute();
-        InputStream stream = method.getResponseBodyAsStream();
-        // Read the whole thing
-        byte[] buffer = new byte[EXPECTED];
-        int count = stream.read(buffer);
-        stream.close(); /* should close the method also */
-        try {
+        try (HTTPMethod method = HTTPFactory.Get(url)) {
             method.execute();
-            pass = false;
-        } catch (HTTPException he) {
-            pass = true;
+            InputStream stream = method.getResponseBodyAsStream();
+            // Read the whole thing
+            byte[] buffer = new byte[EXPECTED];
+            int count = stream.read(buffer);
+            stream.close(); /* should close the method also */
+            try {
+                method.execute();
+                pass = false;
+            } catch (HTTPException he) {
+                pass = true;
+            }
         }
         assertTrue("TestHTTPMethod.testGetStream", pass);
-        session.close();
     }
+
     public void
     testGetStreamPartial() throws Exception
     {
-        HTTPSession session = null;
-        HTTPMethod method = null;
-
         String url = baseurl + "/" + testcase;
-        String baseline = threddsRoot + relativebaseline + "/" + testcase;
+        String baseline = getThreddsroot() + relativebaseline + "/" + testcase;
 
         System.out.println("*** Testing: HTTPMethod");
         System.out.println("*** URL: " + url);
 
         System.out.println("*** Testing: HTTPMethod.getResponseBodyAsStream partial read");
-        session = HTTPFactory.newSession(url);
-        method = HTTPFactory.Get(session);
-        method.execute();
-        InputStream stream = method.getResponseBodyAsStream();
-        byte[] buffer = new byte[EXPECTED];
-        int count = stream.read(buffer,0,10); // partial read
-        method.close();
-        try {
-            count = stream.read(buffer);
-            pass = false;
-        } catch (Throwable t) {
-            pass = true;
+        try (HTTPMethod method = HTTPFactory.Get(url)) {
+            method.execute();
+            InputStream stream = method.getResponseBodyAsStream();
+            byte[] buffer = new byte[EXPECTED];
+            int count = stream.read(buffer, 0, 10); // partial read
+            method.close();
+            try {
+                count = stream.read(buffer);
+                pass = false;
+            } catch (Throwable t) {
+                pass = true;
+            }
         }
         assertTrue("TestHTTPMethod.testGetStreamPartial", pass);
-        session.close();
     }
 }

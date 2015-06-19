@@ -33,8 +33,10 @@
 package ucar.nc2;
 
 import junit.framework.*;
+import org.junit.experimental.categories.Category;
 import ucar.ma2.*;
-import ucar.unidata.test.ma2.TestMa2Utils;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
+import ucar.unidata.test.util.UtilsMa2Test;
 import ucar.unidata.test.util.TestDir;
 
 import java.io.*;
@@ -208,13 +210,14 @@ public class TestReadStrides extends TestCase {
     ncfile.close();
   }
 
+  @Category(NeedsCdmUnitTest.class)
   public void testReadStridesAll() throws IOException, InvalidRangeException {
-    testReadStrides("ncml/nc/time0.nc");
-    testReadStrides("gini/HI-NATIONAL_14km_IR_20050918_2000.gini");
+    testReadStrides(TestDir.cdmLocalTestDataDir+"ncml/nc/time0.nc");
+    testReadStrides(TestDir.cdmUnitTestDir+"formats/gini/HI-NATIONAL_14km_IR_20050918_2000.gini");
   }
 
   private void testReadStrides(String filename) throws IOException, InvalidRangeException {
-    NetcdfFile ncfile = TestDir.openFileLocal(filename);
+    NetcdfFile ncfile = TestDir.open(filename);
 
     List vars = ncfile.getVariables();
     for (int i = 0; i < vars.size(); i++) {
@@ -250,7 +253,7 @@ public class TestReadStrides extends TestCase {
          Array sectionRead = v.read(ranges);
          Array sectionMake = allData.sectionNoReduce( ranges);
 
-         TestMa2Utils.testEquals(sectionRead, sectionMake);
+         UtilsMa2Test.testEquals(sectionRead, sectionMake);
        }
      }
 

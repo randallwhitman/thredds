@@ -35,6 +35,7 @@ package thredds.tds.ethan.httpunit;
 
 import com.meterware.httpunit.WebConversation;
 import junit.framework.TestCase;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.util.Properties;
 
@@ -60,8 +61,10 @@ public class TestServerSiteIDD extends TestCase
     super( name );
   }
 
+  @Override
   protected void setUp()
   {
+    ThreddsServer.LIVE.assumeIsAvailable();
     wc = new WebConversation();
 
     Properties env = System.getProperties();

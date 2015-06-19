@@ -5,22 +5,18 @@
   <parent>
     <artifactId>thredds-parent</artifactId>
     <groupId>edu.ucar</groupId>
-    <version>4.5.4-SNAPSHOT</version>
+    <version>4.6.2-SNAPSHOT</version>
   </parent>
 
   <artifactId>netcdf4</artifactId>
-  <name>netCDF-4 IOSP JNI connection to C library</name>
+  <name>NetCDF-4 IOSP</name>
+  <description>An IOSP for NetCDF-4 that loads the C library to read and write files.</description>
+  <url>https://www.unidata.ucar.edu/software/netcdf/</url>
 
   <dependencies>
-
     <dependency>
-      <groupId>edu.ucar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>cdm</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>net.jcip</groupId>
-      <artifactId>jcip-annotations</artifactId>
     </dependency>
 
     <dependency>
@@ -28,11 +24,17 @@
      	<artifactId>jna</artifactId>
      </dependency>
 
+    <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Logging ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-jdk14</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 

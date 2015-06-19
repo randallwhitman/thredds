@@ -6,19 +6,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import thredds.featurecollection.FeatureCollectionConfig;
 import thredds.featurecollection.FeatureCollectionType;
+import thredds.inventory.CollectionAbstract;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Read in the <featureCollection></featureCollection> element
+ * Read in the <featureCollection> element
  *
  * @author caron
  * @since 11/11/13
  */
 public class FeatureCollectionReader {
   static private final Logger logger = LoggerFactory.getLogger(FeatureCollectionReader.class);
+
+    // input is xml file with just the <featureCollection>
+  static public FeatureCollectionConfig getConfigFromSnippet(String filename) {
+
+    org.jdom2.Document doc;
+    try {
+      SAXBuilder builder = new SAXBuilder();
+      doc = builder.build(filename);
+    } catch (Exception e) {
+      System.out.printf("Error parsing featureCollection %s err = %s", filename, e.getMessage());
+      return null;
+    }
+
+    return FeatureCollectionReader.readFeatureCollection(doc.getRootElement());
+  }
+
 
   /**
    * Read a catalog and extract a FeatureCollectionConfig from it
@@ -91,25 +108,24 @@ public class FeatureCollectionReader {
       logger.error( "featureCollection "+name+" must have a <collection> element." );
       return null;
     }
-    String specName = collElem.getAttributeValue("name");
-    if (specName == null) specName = name; // If missing, the Feature Collection name is used.
+    String collectionName = collElem.getAttributeValue("name");
+    collectionName = CollectionAbstract.cleanName(collectionName != null ? collectionName : name);
+
     String spec = collElem.getAttributeValue("spec");
-    // String spec = expandAliasForCollectionSpec(collElem.getAttributeValue("spec")); // LOOK
+    // String spec = expandAliasForCollectionSpec(collElem.getAttributeValue("spec")); // now done externally
     String timePartition = collElem.getAttributeValue("timePartition");
     String dateFormatMark = collElem.getAttributeValue("dateFormatMark");
     String olderThan = collElem.getAttributeValue("olderThan");
-    String useIndexOnly = collElem.getAttributeValue("useIndexOnly");
-    //String recheckAfter = collElem.getAttributeValue("recheckAfter");
-    //if (recheckAfter == null)
-    //   recheckAfter = collElem.getAttributeValue("recheckEvery"); // old name
-    if (spec == null) {
-      logger.error( "featureCollection "+name+" must have a spec attribute." );
+    String rootDir = collElem.getAttributeValue("rootDir");
+    String regExp = collElem.getAttributeValue("regExp");
+    if (spec == null && rootDir == null) {
+      logger.error( "featureCollection "+name+" must have a spec or rootDir attribute." );
       return null;
     }
-    String collName = (specName != null) ? specName : name;
     Element innerNcml = featureCollectionElement.getChild( "netcdf", InvCatalogFactory10.ncmlNS );
-    FeatureCollectionConfig config = new FeatureCollectionConfig(collName, path, fcType, spec, dateFormatMark, olderThan,
-            timePartition, useIndexOnly, innerNcml);
+    FeatureCollectionConfig config = new FeatureCollectionConfig(name, path, fcType, spec, collectionName, dateFormatMark, olderThan,
+            timePartition, innerNcml);
+    config.setFilter(rootDir, regExp);
 
     // tds and update elements
     Element tdmElem = featureCollectionElement.getChild( "tdm", InvCatalogFactory10.defNS );

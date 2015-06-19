@@ -428,8 +428,13 @@ public class NCdumpW {
     out.flush();
   }
 
+  // for backwards compatibility with NCDump
+  static public void printArray(Array array, String name, PrintStream out, CancelTask ct) {
+    PrintWriter pw = new PrintWriter( new OutputStreamWriter(out, CDM.utf8Charset));
+    printArray(array, name, null, pw, new Indent(2), ct, true);
+  }
+
   /**
-   *
    * @deprecated use toString()
    */
   static public String printArray(Array array, String name, CancelTask ct) {
@@ -577,9 +582,12 @@ public class NCdumpW {
   private static void printByteBuffer(PrintWriter out, ByteBuffer bb, Indent indent) {
     out.print(indent + "0x");
     int last = bb.limit() - 1;
-    for (int i = 0; i <= last; i++) {
-      out.printf("%02x", bb.get(i));
-    }
+    if(last < 0)
+        out.printf("00");
+    else
+        for (int i = 0; i <= last; i++) {
+          out.printf("%02x", bb.get(i));
+        }
   }
 
   static void printStringArray(PrintWriter out, Array ma, Indent indent, ucar.nc2.util.CancelTask ct) {

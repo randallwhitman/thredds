@@ -37,6 +37,7 @@ import ucar.nc2.util.UnitTestCommon;
 import ucar.nc2.util.rc.RC;
 import ucar.unidata.test.Diff;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -68,13 +69,14 @@ public class TestGroups extends UnitTestCommon
     {
         super("DAP Group tests");
         // Check if user specified server.
-        testserver = TestDir.remoteTestServer;
+        testserver = TestDir.dap2TestServer;
         definetestcases();
     }
 
     void
     definetestcases()
     {
+        String threddsRoot = getThreddsroot();
         testcases = new ArrayList<Testcase>();
         if(false) {// use this arm to do debugging
             testcases.add(new Testcase("External user provided group example",
@@ -114,6 +116,7 @@ public class TestGroups extends UnitTestCommon
     public void
     testGroup() throws Exception
     {
+        ThreddsServer.REMOTETEST.assumeIsAvailable();
         // Run  with usegroups == true
         if(!usegroups)
             assertTrue("TestGroups: Group Support not enabled", false);

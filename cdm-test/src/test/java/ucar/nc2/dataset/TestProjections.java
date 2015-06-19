@@ -34,6 +34,7 @@
 package ucar.nc2.dataset;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import ucar.ma2.InvalidRangeException;
@@ -45,6 +46,7 @@ import ucar.unidata.geoloc.projection.proj4.CylindricalEqualAreaProjection;
 import ucar.unidata.geoloc.projection.proj4.EquidistantAzimuthalProjection;
 import ucar.unidata.geoloc.projection.sat.Geostationary;
 import ucar.unidata.geoloc.projection.sat.MSGnavigation;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 import ucar.unidata.util.Parameter;
 
@@ -57,11 +59,12 @@ import java.util.*;
  * @author caron
  */
 @RunWith(Parameterized.class)
+@Category(NeedsCdmUnitTest.class)
 public class TestProjections {
   private static String testDir= TestDir.cdmUnitTestDir + "transforms/";
   private static LatLonPointImpl testPoint = new LatLonPointImpl(0, 145.0);
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}-{1}")
   public static Collection<Object[]> data() {
     Object[][] data = new Object[][]{
 
@@ -79,7 +82,7 @@ public class TestProjections {
 
             {testDir + "Eumetsat.VerticalPerspective.grb", "SpaceViewPerspective_Projection", "Pixel_scene_type", MSGnavigation.class, testPoint},
 
-            {TestDir.cdmUnitTestDir + "formats/hdf4/eos/modis/MOD13Q1.A2012321.h00v08.005.2012339011757.hdf",
+            {testDir + "sinusoidal/MOD13Q1.A2008033.h12v04.005.2008051065305.hdf",
                     "MODIS_Grid_16DAY_250m_500m_VI/Data_Fields/Projection",
                     "MODIS_Grid_16DAY_250m_500m_VI/Data_Fields/250m_16_days_NDVI",
                     Sinusoidal.class, testPoint},
@@ -184,9 +187,11 @@ public class TestProjections {
       assert projClass.isInstance(proj) : proj.getClass().getName();
 
       if (projClass != RotatedPole.class) {
+        System.out.printf("Projection Parameters%n");
         boolean found = false;
         double radius = 0.0;
         for (Parameter p : proj.getProjectionParameters()) {
+          System.out.printf("%s%n", p);
           if (p.getName().equals(CF.EARTH_RADIUS)) {
             found = true;
             radius = p.getNumericValue();
@@ -196,6 +201,7 @@ public class TestProjections {
             radius = p.getNumericValue();
           }
         }
+        System.out.printf("%n");
 
         assert found;
         assert (radius > 10000) : radius; // meters

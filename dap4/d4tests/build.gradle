@@ -1,0 +1,35 @@
+dependencies {
+    // A lot of these depedencies should be in the testRuntime config, not testCompile.
+
+    testCompile project(':dap4:d4core')
+    testCompile project(':dap4:d4cdmclient')
+    testCompile project(':dap4:d4shared')
+    testCompile project(':dap4:d4servletshared')
+    testCompile project(':dap4:d4ts')
+    testCompile project(':cdm')
+    testCompile project(':httpservices')
+
+    def tdsDep = testCompile project(':tds')
+    configure(tdsDep) {
+        // We don't want tds's logger. We'll provide our own (in testing.gradle).
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+
+    testCompile libraries["javax.servlet-api"]
+    testCompile libraries["spring-test"]
+    testCompile libraries["slf4j-api"]
+}
+
+test {
+    systemProperties['testargs'] = System.getProperty("testargs", "")
+
+    include 'dap4/test/TestParserDMR.class'
+    include 'dap4/test/TestParserCE.class'
+    include 'dap4/test/TestNc4Iosp.class'
+    include 'dap4/test/TestServlet.class'
+    include 'dap4/test/TestServletConstraints.class'
+    include 'dap4/test/TestCDMClient.class'
+    include 'dap4/test/TestConstraints.class'
+    include 'dap4/test/TestDSR.class'
+    // include 'dap4/test/TestH5Iosp.class'
+}

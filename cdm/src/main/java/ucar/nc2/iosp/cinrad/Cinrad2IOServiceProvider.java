@@ -54,6 +54,7 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
   static private org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Cinrad2IOServiceProvider.class);
   static private final int MISSING_INT = -9999;
   static private final float MISSING_FLOAT = Float.NaN;
+  static public boolean isSC = false;
 
   public boolean isValidFileOld( RandomAccessFile raf) {
     try {
@@ -72,12 +73,17 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
     }
   }
 
-
   public boolean isValidFile( RandomAccessFile raf) {
       int data_msecs = 0;
       short data_julian_date = 0;
 
       try{
+          if(isCINRAD(raf)) {
+            Cinrad2Record.MISSING_DATA = (byte) 0;
+            return true;
+          } else {
+            Cinrad2Record.MISSING_DATA = (byte) 1;
+          }
           raf.order(RandomAccessFile.LITTLE_ENDIAN);
           raf.seek(0);
           raf.skipBytes(14);
@@ -90,6 +96,7 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
           data_msecs    = bytesToInt(b4, true);
           byte [] b2 =  raf.readBytes(2);
           data_julian_date  = (short)bytesToShort(b2, true);
+          if (data_msecs > 86400000) return false;
           java.util.Date dd =Cinrad2Record.getDate(data_julian_date,data_msecs);
 
           Calendar cal = new GregorianCalendar(new SimpleTimeZone(0, "GMT"));
@@ -105,6 +112,31 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
       }
 
   }
+
+  public boolean isCINRAD( RandomAccessFile raf) {
+    int data_msecs = 0;
+
+    try{
+      raf.order(RandomAccessFile.LITTLE_ENDIAN);
+      raf.seek(0);
+
+      byte [] b128 = raf.readBytes(128);
+      String radarT = new String(b128);
+
+      if(radarT.contains("CINRAD/SC")) {
+        isSC = true;
+        return true;
+      }
+      else {
+        isSC = false;
+        return false;
+      }
+    } catch (IOException ioe) {
+      return false;
+    }
+
+  }
+
 
     public static int bytesToInt(byte [] bytes, boolean swapBytes) {
         byte a = bytes[0];
@@ -158,6 +190,7 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
 
     volScan = new Cinrad2VolumeScan( raf, cancelTask); // raf may change if uncompressed
     this.raf = volScan.raf;
+    this.location = volScan.raf.getLocation();
 
     if (volScan.hasDifferentDopplarResolutions())
       throw new IllegalStateException("volScan.hasDifferentDopplarResolutions");
@@ -567,7 +600,10 @@ public class Cinrad2IOServiceProvider extends AbstractIOServiceProvider {
         ii.setByteNext( Cinrad2Record.MISSING_DATA);
       return;
     }
-    r.readData(this.raf, datatype, gateRange, ii);
+    if(isSC)
+      r.readData0(this.raf, datatype, gateRange, ii);
+    else
+      r.readData(this.raf, datatype, gateRange, ii);
   }
 
   private static class Vgroup {

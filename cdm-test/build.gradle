@@ -1,16 +1,25 @@
+description = "Classes for CDM unit and integration testing. Relies on having access to cdmUnitTest directory, so can" +
+        " only be run at Unidata."
+ext.title = "Test CDM (upc/share - Unidata only)"
 
 dependencies {
-  compile project(':cdm')
-  compile project(':clcommon')
-  compile project(':bufr')
-  compile project(':grib')
-  compile project(':netcdf4')
-  compile (project(':opendap'))  { // eliminate servlet
-      transitive = false
-    }
-  compile (project(':visad'))
-  testCompile project(':cdm').sourceSets.test.output
+    testCompile project(":cdm")
+    testCompile project(":bufr")
+    testCompile project(":grib")
+    testCompile project(":netcdf4")
+    testRuntime project(":opendap")
+    testCompile project(":httpservices")
+    testCompile project(":visadCdm")
+    testRuntime project(":clcommon")
+
+    testCompile libraries["visad"]
+    testCompile libraries["httpclient"]
+    testCompile libraries["httpcore"]
+    testCompile libraries["commons-io"]
+    testCompile libraries["commons-compress"]
+    testCompile libraries["xz"]
+    testCompile libraries["jj2000"]
+    testCompile libraries["jdom2"]
+
+    testCompile libraries["slf4j-api"]
 }
-
-
-

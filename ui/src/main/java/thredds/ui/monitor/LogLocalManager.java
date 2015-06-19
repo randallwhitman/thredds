@@ -37,6 +37,7 @@ import ucar.nc2.util.IO;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.*;/*
@@ -119,7 +120,9 @@ public class LogLocalManager {
     for (File f : files) {
       if (f.isDirectory()) continue;
       if (f.getName().endsWith(".zip")) continue;
-      list.add(new FileDateRange(f));
+      FileDateRange fdr = new FileDateRange(f);
+      if (!fdr.bad)
+        list.add(fdr);
     }
     Collections.sort(list, new ServletFileCompare());
 
@@ -163,7 +166,7 @@ public class LogLocalManager {
     return localFiles;
   }
 
-  private static class ServletFileCompare implements Comparator<FileDateRange> {
+  private static class ServletFileCompare implements Comparator<FileDateRange>, Serializable {
     public int compare(FileDateRange o1, FileDateRange o2) {
       if (o1.f.getName().equals(specialLog)) return 1;
       if (o2.f.getName().equals(specialLog)) return -1;
@@ -194,11 +197,17 @@ public class LogLocalManager {
   public class FileDateRange {
     File f;
     Date start, end;
+    boolean bad;
 
     FileDateRange(File f) {
       this.f = f;
       this.start = extractStartDate(f.getName());
-      System.out.printf(" %s == %s%n", f.getName(), df.toDateTimeStringISO(start));
+      if (this.start == null) {
+        bad = true;
+        System.out.printf(" %s == BAD FILE%n", f.getName());
+      } else {
+        System.out.printf(" %s == %s%n", f.getName(), df.toDateTimeStringISO(start));
+      }
     }
 
     Date extractStartDate(String name) {

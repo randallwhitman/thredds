@@ -1,4 +1,17 @@
-apply plugin: 'shadow'
+description = "Several netCDF-Java IOSPs that depend on the VisAD library including a GEMPAK IOSP for grid, station, " +
+        "and sounding datasets; a McIDAS IOSP for grid datasets; and an ADDE IOSP for image and station datasets."
+ext.title = "VisAD-based IOSPs"
+
+dependencies {
+    compile project(':cdm')
+    compile project(':grib')
+
+    compile libraries["visad"]
+    compile libraries["guava"]
+
+    compile libraries["slf4j-api"]
+}
+
 /* jar {
   manifest {
     attributes 'Implementation-Title': 'visadCdm'
@@ -51,39 +64,31 @@ apply plugin: 'shadow'
 
 } */
 
-dependencies {
-  compile project(':cdm')
-  compile project(':grib')
-  compile 'edu.wisc.ssec:visad:2.0-20130124'
-  testCompile project(':cdm').sourceSets.test.output
-}
-
-shadow {
-  outputFile = file("${destinationDir }/visadCdm-${version}.jar")
-  stats = true
-
-  artifactSet {
-      //include 'visad.jar'
-      include ('edu.wisc.ssec:visad:2.0-20130124')
-  }
-
-  /* filter('edu.wisc.ssec:visad:2.0-20130124') {
-    exclude 'dods/*'
-    exclude 'gnu/*'
-    exclude 'HTTPClient/*'
-    exclude 'loci/*'
-    exclude 'ncsa/*'
-    exclude 'ucar/*'
-    exclude 'visad/bom/*'
-    exclude 'visad/cluster/*'
-    exclude 'visad/install/*'
-    exclude 'visad/python/*'
-  }  */
-
-  jar {
-    manifest {
-      attributes 'Implementation-Title': 'visadCdm'
-    }
-  }
-
-}
+//shadow {
+//    outputFile = file("${destinationDir}/visadCdm-${version}.jar")
+//    stats = true
+//
+//    artifactSet {
+//        //include 'visad.jar'
+//        include('edu.wisc.ssec:visad:2.0-20130124')
+//    }
+//
+//    /* filter('edu.wisc.ssec:visad:2.0-20130124') {
+//      exclude 'dods/*'
+//      exclude 'gnu/*'
+//      exclude 'HTTPClient/*'
+//      exclude 'loci/*'
+//      exclude 'ncsa/*'
+//      exclude 'ucar/*'
+//      exclude 'visad/bom/*'
+//      exclude 'visad/cluster/*'
+//      exclude 'visad/install/*'
+//      exclude 'visad/python/*'
+//    }  */
+//
+//    jar {
+//        manifest {
+//            attributes 'Implementation-Title': 'visadCdm'
+//        }
+//    }
+//}

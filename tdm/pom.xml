@@ -5,7 +5,7 @@
   <parent>
     <groupId>edu.ucar</groupId>
     <artifactId>thredds-parent</artifactId>
-    <version>4.5.4-SNAPSHOT</version>
+    <version>4.6.2-SNAPSHOT</version>
   </parent>
 
   <!-- ===========================================================
@@ -26,22 +26,22 @@
        =========================================================== -->
   <dependencies>
     <dependency>
-      <groupId>edu.ucar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>httpservices</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>edu.ucar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>cdm</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>edu.ucar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>grib</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>edu.ucar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>tdcommon</artifactId>
     </dependency>
 
@@ -50,30 +50,6 @@
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpcore</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpmime</artifactId>
-    </dependency>
-
-    <!-- logging -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j-impl</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-core</artifactId>
-      <scope>runtime</scope>
-    </dependency>
 
     <!-- Required for reading THREDDS, NcML, BUFR, HDF-EOS, NEXRAD2, OPeNDAP files. -->
     <dependency>
@@ -81,29 +57,36 @@
       <artifactId>jdom2</artifactId>
     </dependency>
 
-    <!-- Required for reading THREDDS files. -->
-    <dependency>
-      <groupId>org.quartz-scheduler</groupId>
-      <artifactId>quartz</artifactId>
-    </dependency>
-
     <!-- spring -->
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-core</artifactId>
-      <version>${org.springframework.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
-      <version>${org.springframework.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-beans</artifactId>
-      <version>${org.springframework.version}</version>
     </dependency>
 
+    <!--~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Logging ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~-->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>jcl-over-slf4j</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -120,7 +103,7 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <finalName>tdm-4.5</finalName>
+              <finalName>tdm-4.6</finalName>
 
               <artifactSet>
                 <excludes>
@@ -128,15 +111,6 @@
                   <exclude>edu.wisc:visad</exclude>
                 </excludes>
               </artifactSet>
-
-              <!-- filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                  <excludes>
-                    <exclude>log4j.xml</exclude>
-                  </excludes>
-                </filter>
-              </filters -->
 
               <transformers>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
@@ -150,15 +124,34 @@
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
               </transformers>
+
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <!-- Filter out crap from various other packages. -->
+                    <excludes>AUTHORS</excludes>
+                    <excludes>DATE</excludes>
+                    <excludes>LICENCE</excludes>
+                    <excludes>LICENSE</excludes>
+                    <excludes>NOTICE</excludes>
+                    <excludes>*.txt</excludes>
+                    <excludes>*.xml</excludes>
+                    <excludes>META-INF/DEPENDENCIES</excludes>
+                    <excludes>META-INF/LICENSE</excludes>
+                    <excludes>META-INF/NOTICE</excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <excludes>META-INF/*.txt</excludes>
+                    <excludes>META-INF/*.xml</excludes>
+                  </excludes>
+                </filter>
+              </filters>
             </configuration>
           </execution>
-
         </executions>
-
       </plugin>
-
     </plugins>
-
   </build>
-
 </project>

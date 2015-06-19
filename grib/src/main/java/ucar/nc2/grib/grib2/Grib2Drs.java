@@ -50,6 +50,7 @@ public abstract class Grib2Drs {
   public static Grib2Drs factory(int template, RandomAccessFile raf) throws IOException {
     switch (template) {
       case 0:
+      case 41:
         return new Type0(raf);
       case 2:
         return new Type2(raf);
@@ -57,8 +58,10 @@ public abstract class Grib2Drs {
         return new Type3(raf);
       case 40:
         return new Type40(raf);
+      //case 51:    //
+      //  return new Type51(raf);
       case 50002: // ECMWF's second order packing
-    	return new Type50002(raf);
+    	  return new Type50002(raf);
       default:
         throw new UnsupportedOperationException("Unsupported DRS type = " + template);
     }

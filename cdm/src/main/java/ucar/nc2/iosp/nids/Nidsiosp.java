@@ -32,7 +32,7 @@
  */
 package ucar.nc2.iosp.nids;
 
-import thredds.catalog.DataFormatType;
+import ucar.nc2.constants.DataFormatType;
 import ucar.ma2.*;
 import ucar.nc2.*;
 import ucar.nc2.constants.CDM;
@@ -56,7 +56,6 @@ import java.nio.ByteBuffer;
 public class Nidsiosp extends AbstractIOServiceProvider {
 
   protected boolean readonly;
-  private ucar.nc2.NetcdfFile ncfile;
   protected Nidsheader headerParser;
 
   private int pcode;
@@ -83,26 +82,16 @@ public class Nidsiosp extends AbstractIOServiceProvider {
   }
 
   public String getFileTypeId() {
-    return DataFormatType.NIDS.toString();
+    return DataFormatType.NIDS.getDescription();
   }
 
   public String getFileTypeDescription() {
     return "NEXRAD Level-III (NIDS) Products";
   }
 
-  /**
-   * Open the file and read the header part
-   *
-   * @param raf
-   * @param file
-   * @param cancelTask
-   * @throws IOException
-   */
-
-  public void open(ucar.unidata.io.RandomAccessFile raf, ucar.nc2.NetcdfFile file,
+  public void open(ucar.unidata.io.RandomAccessFile raf, ucar.nc2.NetcdfFile ncfile,
                    ucar.nc2.util.CancelTask cancelTask) throws IOException {
     super.open(raf, ncfile, cancelTask);
-    ncfile = file;
 
     headerParser = new Nidsheader();
     headerParser.read(this.raf, ncfile);

@@ -76,7 +76,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
   int maxSizeOfObjects;
   long nextHugeObjectId, freeSpace, managedSpace, allocatedManagedSpace, offsetDirectBlock,
           nManagedObjects, sizeHugeObjects, nHugeObjects, sizeTinyObjects, nTinyObjects;
-  long btreeAddress, freeSpaceTrackerAddress;
+  long btreeAddressHugeObjects, freeSpaceTrackerAddress;
 
   short maxHeapSize, startingNumRows, currentNumRows;
   long maxDirectBlockSize;
@@ -93,7 +93,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
   byte[] ioFilterInfo;
 
   DoublingTable doublingTable;
-
+  BTree2 btreeHugeObjects;
 
 
   FractalHeap(H5header h5, String forWho, long address, MemTracker memTracker) throws IOException {
@@ -118,7 +118,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
 
     maxSizeOfObjects = raf.readInt(); // greater than this are huge objects
     nextHugeObjectId = h5.readLength(); // next id to use for a huge object
-    btreeAddress = h5.readOffset(); // v2 btee to track huge objects
+    btreeAddressHugeObjects = h5.readOffset(); // v2 btee to track huge objects
     freeSpace = h5.readLength();  // total free space in managed direct blocks
     freeSpaceTrackerAddress = h5.readOffset();
     managedSpace = h5.readLength(); // total amount of managed space in the heap
@@ -135,7 +135,9 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
     maxDirectBlockSize = h5.readLength(); // maximum direct block size in bytes, must be power of 2
     maxHeapSize = raf.readShort(); // log2 of the maximum size of heap's linear address space, in bytes
     startingNumRows = raf.readShort(); // starting number of rows of the root indirect block, 0 = maximum needed
-    rootBlockAddress = h5.readOffset(); // can be undefined if no data
+    rootBlockAddress = h5.readOffset(); // This is the address of the root block for the heap.
+                                        // It can be the undefined address if there is no data in the heap.
+                                        // It either points to a direct block (if the Current # of Rows in the Root Indirect Block value is 0), or an indirect block.
     currentNumRows = raf.readShort(); // current number of rows of the root indirect block, 0 = direct block
 
     boolean hasFilters = (ioFilterLen > 0);
@@ -150,7 +152,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
     if (debugDetail || debugFractalHeap) {
       debugOut.println("FractalHeap for " + forWho + " version=" + version + " heapIdLen=" + heapIdLen + " ioFilterLen=" + ioFilterLen + " flags= " + flags);
       debugOut.println(" maxSizeOfObjects=" + maxSizeOfObjects + " nextHugeObjectId=" + nextHugeObjectId + " btreeAddress="
-              + btreeAddress + " managedSpace=" + managedSpace + " allocatedManagedSpace=" + allocatedManagedSpace + " freeSpace=" + freeSpace);
+              + btreeAddressHugeObjects + " managedSpace=" + managedSpace + " allocatedManagedSpace=" + allocatedManagedSpace + " freeSpace=" + freeSpace);
       debugOut.println(" nManagedObjects=" + nManagedObjects + " nHugeObjects= " + nHugeObjects + " nTinyObjects=" + nTinyObjects +
               " maxDirectBlockSize=" + maxDirectBlockSize + " maxHeapSize= 2^" + maxHeapSize);
       debugOut.println(" DoublingTable: tableWidth=" + tableWidth + " startingBlockSize=" + startingBlockSize);
@@ -193,7 +195,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
   void showDetails(Formatter f) {
     f.format("FractalHeap version=" + version + " heapIdLen=" + heapIdLen + " ioFilterLen=" + ioFilterLen + " flags= " + flags + "%n");
     f.format(" maxSizeOfObjects=" + maxSizeOfObjects + " nextHugeObjectId=" + nextHugeObjectId + " btreeAddress="
-            + btreeAddress + " managedSpace=" + managedSpace + " allocatedManagedSpace=" + allocatedManagedSpace + " freeSpace=" + freeSpace + "%n");
+            + btreeAddressHugeObjects + " managedSpace=" + managedSpace + " allocatedManagedSpace=" + allocatedManagedSpace + " freeSpace=" + freeSpace + "%n");
     f.format(" nManagedObjects=" + nManagedObjects + " nHugeObjects= " + nHugeObjects + " nTinyObjects=" + nTinyObjects +
             " maxDirectBlockSize=" + maxDirectBlockSize + " maxHeapSize= 2^" + maxHeapSize + "%n");
     f.format(" rootBlockAddress=" + rootBlockAddress + " startingNumRows=" + startingNumRows + " currentNumRows=" + currentNumRows + "%n%n");
@@ -202,32 +204,91 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
   }
 
 
-  DHeapId getHeapId(byte[] heapId) throws IOException {
+  DHeapId getFractalHeapId(byte[] heapId) throws IOException {
     return new DHeapId(heapId);
   }
 
   class DHeapId {
     int type;
-    int n, m;
+    int subtype;  // 1 = indirect no filter, 2 = indirect, filter 3 = direct, no filter, 4 = direct, filter
+    int n;        // the offset field size
+    int m;
     int offset; // This field is the offset of the object in the heap.
     int size;   // This field is the length of the object in the heap
 
     DHeapId(byte[] heapId) throws IOException {
       type = (heapId[0] & 0x30) >> 4;
-      n = maxHeapSize / 8;
-      m = h5.getNumBytesFromMax(maxDirectBlockSize - 1);
 
-      offset = h5.makeIntFromBytes(heapId, 1, n);
-      size = h5.makeIntFromBytes(heapId, 1 + n, m);
-      // System.out.println("Heap id =" + showBytes(heapId) + " type = " + type + " n= " + n + " m= " + m + " offset= " + offset + " size= " + size);
+      if (type == 0) {
+        n = maxHeapSize / 8;      // This field's size is the minimum number of bytes necessary to encode the Maximum Heap Size value
+        m = h5.getNumBytesFromMax(maxDirectBlockSize - 1);  // This field is the length of the object in the heap.
+        // It is determined by taking the minimum value of Maximum Direct Block Size and Maximum Size of Managed Objects in the Fractal Heap Header.
+        // Again, the minimum number of bytes needed to encode that value is used for the size of this field.
+
+        offset = h5.makeIntFromBytes(heapId, 1, n);
+        size = h5.makeIntFromBytes(heapId, 1 + n, m);
+      }
+
+      else if (type == 1) {
+        // how fun to guess the subtype
+        boolean hasBtree = (btreeAddressHugeObjects > 0);
+        boolean hasFilters = (ioFilterLen > 0);
+        if (hasBtree)
+          subtype = hasFilters ? 2 : 1;
+        else
+          subtype = hasFilters ? 4 : 3;
+
+        switch (subtype) {
+          case 1:
+          case 2:
+            offset = h5.makeIntFromBytes(heapId, 1, (heapId.length-1));
+            break;
+        }
+      } else if (type == 2) {
+        /* The sub-type for tiny heap IDs depends on whether the heap ID is large enough to store objects greater than 16 bytes or not.
+          If the heap ID length is 18 bytes or smaller, the "normal" tiny heap ID form is used. If the heap ID length is greater than 18 bytes in length,
+          the "extented" form is used. */
+        subtype = (heapId.length <= 18) ? 1 : 2; // 0 == normal, 1 = extended
+      }
+
+      else  {
+        throw new UnsupportedOperationException(); // "DHeapId subtype ="+subtype);
+      }
+
+
     }
 
-    long getPos() {
-      return doublingTable.getPos(offset);
+    long getPos() throws IOException {
+      switch (type) {
+        case 0:
+          return doublingTable.getPos(offset);
+        case 1: {
+          switch (subtype) {
+            case 1:
+            case 2:
+              if (btreeHugeObjects == null) {
+                btreeHugeObjects = new BTree2(h5, "FractalHeap btreeHugeObjects", btreeAddressHugeObjects);
+                assert btreeHugeObjects.btreeType == subtype;
+              }
+              BTree2.Record1 record1 = btreeHugeObjects.getEntry1(offset);
+              if (record1 == null) {
+                btreeHugeObjects.getEntry1(offset); // debug
+                throw new RuntimeException("Cant find DHeapId="+offset);
+              }
+              return record1.hugeObjectAddress;
+
+            case 3:
+            case 4:
+              return offset;     // guess
+          }
+        }
+        default:
+          throw new RuntimeException("Unknown DHeapId type ="+type);
+      }
     }
 
     public String toString() {
-      return type + " " + n + " " + m + " " + offset + " " + size;
+      return type + "," + n + "," + m + "," + offset + "," + size;
     }
   }
 
@@ -361,7 +422,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
     long offset;
     long size;
     int extraBytes;
-
+    boolean wasRead; // when empty, object exists, but fields are not init. not yet sure where to use.
 
     @Override
     public String toString() {
@@ -441,6 +502,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
   }
 
   void readDirectBlock(long pos, long heapAddress, DataBlock dblock) throws IOException {
+    if (pos < 0) return; // means its empty
     raf.seek(pos);
 
     // header
@@ -465,6 +527,7 @@ Where startingBlockSize is from the header, ie the same for all indirect blocks.
     if ((flags & 2) != 0) dblock.extraBytes += 4; // ?? size of checksum
     //dblock.size -= size; // subtract space used by other fields
 
+    dblock.wasRead = true;
     if (debugDetail || debugFractalHeap)
       debugOut.println("  DirectBlock offset= " + dblock.offset + " dataPos = " + dblock.dataPos);
   }

@@ -4,8 +4,8 @@ import ucar.ma2.*;
 import ucar.nc2.dataset.CoordinateAxis;
 import ucar.nc2.dataset.CoordinateAxis1D;
 import ucar.nc2.dataset.CoordinateAxis2D;
-import ucar.nc2.ft.grid.Coverage;
-import ucar.nc2.ft.grid.CoverageCS;
+import ucar.nc2.ft.cover.Coverage;
+import ucar.nc2.ft.cover.CoverageCS;
 import ucar.nc2.ui.grid.ColorScale;
 import ucar.unidata.geoloc.*;
 import ucar.unidata.geoloc.projection.LatLonProjection;
@@ -42,7 +42,7 @@ public class CoverageRenderer {
   private Array dataH;
   private int wantLevel = -1, wantSlice = -1, wantTime = -1, horizStride = 1;   // for next draw()
   private int wantRunTime = -1, wantEnsemble = -1;
-  private int lastLevel = -1, lastTime = -1, lastSlice = -1, lastStride = -1;   // last data read
+  private int lastLevel = -1, lastTime = -1, lastStride = -1;   // last data read
   private int lastRunTime = -1, lastEnsemble = -1;   // last data read
   private Coverage lastGrid = null;
 

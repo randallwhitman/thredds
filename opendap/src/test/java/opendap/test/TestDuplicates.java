@@ -37,6 +37,7 @@ import ucar.nc2.dods.DODSNetcdfFile;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.Diff;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -64,8 +65,10 @@ public class TestDuplicates extends UnitTestCommon
   @Test
   public void
   testDuplicates() throws Exception {
+    ThreddsServer.REMOTETEST.assumeIsAvailable();
+
     // Check if we are running against remote or localhost, or what.
-    String testserver = TestDir.remoteTestServer;
+    String testserver = TestDir.dap2TestServer;
 
     List<Result> results = new ArrayList<Result>();
     if (true) {

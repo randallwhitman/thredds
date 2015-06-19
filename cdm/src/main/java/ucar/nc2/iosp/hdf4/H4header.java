@@ -38,9 +38,7 @@ import ucar.nc2.*;
 import ucar.ma2.*;
 import ucar.unidata.util.Format;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.File;
+import java.io.*;
 import java.util.*;
 import java.nio.ByteBuffer;
 
@@ -51,7 +49,7 @@ import java.nio.ByteBuffer;
  * @author caron
  * @since Jul 18, 2007
  */
-public class H4header {
+public class    H4header {
   static private org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(H4header.class);
 
   static private final byte[] head = {0x0e, 0x03, 0x13, 0x01};
@@ -117,11 +115,12 @@ public class H4header {
   private boolean isEos;
 
   private List<Tag> alltags;
-  private Map<Integer, Tag> tagMap = new HashMap<Integer, Tag>();
-  private Map<Short, Vinfo> refnoMap = new HashMap<Short, Vinfo>();
+  private Map<Integer, Tag> tagMap = new HashMap<>();
+  private Map<Short, Vinfo> refnoMap = new HashMap<>();
 
   private MemTracker memTracker;
-  private PrintStream debugOut = System.out;
+  //private PrintStream debugOut = System.out;
+  private java.io.PrintWriter debugOut = new PrintWriter( new OutputStreamWriter(System.out, CDM.utf8Charset));
 
   public boolean isEos() {
     return isEos;
@@ -146,7 +145,7 @@ public class H4header {
       debugOut.println("H4header 0pened file to read:'" + raf.getLocation() + "', size=" + actualSize / 1000 + " Kb");
 
     // read the DDH and DD records
-    alltags = new ArrayList<Tag>();
+    alltags = new ArrayList<>();
     long link = raf.getFilePointer();
     while (link > 0)
       link = readDDH(alltags, link);
@@ -192,8 +191,8 @@ public class H4header {
   }
 
   private void construct(ucar.nc2.NetcdfFile ncfile, List<Tag> alltags) throws IOException {
-    List<Variable> vars = new ArrayList<Variable>();
-    List<Group> groups = new ArrayList<Group>();
+    List<Variable> vars = new ArrayList<>();
+    List<Group> groups = new ArrayList<>();
 
     // pass 1 : Vgroups with special classes
     for (Tag t : alltags) {
@@ -299,7 +298,7 @@ public class H4header {
   }
 
   private void adjustDimensions() {
-    Map<Dimension, List<Variable>> dimUsedMap = new HashMap<Dimension, List<Variable>>();
+    Map<Dimension, List<Variable>> dimUsedMap = new HashMap<>();
     findUsedDimensions(ncfile.getRootGroup(), dimUsedMap);
     Set<Dimension> dimUsed = dimUsedMap.keySet();
 
@@ -338,7 +337,7 @@ public class H4header {
         if (!d.isShared()) continue;
         List<Variable> vlist = dimUsedMap.get(d);
         if (vlist == null) {
-          vlist = new ArrayList<Variable>();
+          vlist = new ArrayList<>();
           dimUsedMap.put(d, vlist);
         }
         vlist.add(v);
@@ -350,7 +349,7 @@ public class H4header {
   }
 
   private void makeDimension(TagVGroup group) throws IOException {
-    List<TagVH> dims = new ArrayList<TagVH>();
+    List<TagVH> dims = new ArrayList<>();
 
     Tag data = null;
     for (int i = 0; i < group.nelems; i++) {
@@ -605,8 +604,8 @@ public class H4header {
 
   private Variable makeImage(TagGroup group) {
     TagRIDimension dimTag = null;
-    TagRIPalette palette = null;
-    TagNumberType ntag = null;
+    TagRIPalette palette;
+    TagNumberType ntag;
     Tag data = null;
 
     Vinfo vinfo = new Vinfo(group.refno);
@@ -657,7 +656,7 @@ public class H4header {
 
     // assume dimensions are not shared for now
     if (dimTag.dims == null) {
-      dimTag.dims = new ArrayList<Dimension>();
+      dimTag.dims = new ArrayList<>();
       dimTag.dims.add(makeDimensionUnshared("ydim", dimTag.ydim));
       dimTag.dims.add(makeDimensionUnshared("xdim", dimTag.xdim));
     }
@@ -760,7 +759,6 @@ public class H4header {
         for (int fld = 0; fld < vh.nfields; fld++) {
           Variable m = new Variable(ncfile, null, s, vh.fld_name[fld]);
           short type = vh.fld_type[fld];
-          int nbytes = vh.fld_isize[fld];
           short nelems = vh.fld_order[fld];
           H4type.setDataType(type, m);
           if (nelems > 1)
@@ -768,7 +766,7 @@ public class H4header {
           else
             m.setIsScalar();
 
-          m.setSPobject(new Minfo(vh.fld_offset[fld], nbytes, nelems));
+          m.setSPobject(new Minfo(vh.fld_offset[fld]));
           s.addMemberVariable(m);
         }
 
@@ -790,13 +788,10 @@ public class H4header {
   // member info
 
   static class Minfo {
-    short nelems;
-    int offset, nbytes;
+    int offset;
 
-    Minfo(int offset, int nbytes, short nelems) {
+    Minfo(int offset) {
       this.offset = offset;
-      this.nbytes = nbytes;
-      this.nelems = nelems;
     }
   }
 
@@ -808,7 +803,7 @@ public class H4header {
     TagSDDimension dim = null;
     TagNumberType ntag = null;
     TagData data = null;
-    List<Dimension> dims = new ArrayList<Dimension>();
+    List<Dimension> dims = new ArrayList<>();
     for (int i = 0; i < group.nelems; i++) {
       Tag tag = tagMap.get(tagid(group.elem_ref[i], group.elem_tag[i]));
       if (tag == null) {
@@ -993,7 +988,7 @@ public class H4header {
   class Vinfo implements Comparable<Vinfo> {
     short refno;
     Variable v;
-    List<Tag> tags = new ArrayList<Tag>();
+    List<Tag> tags = new ArrayList<>();
 
     // info about reading the data
     TagData data;
@@ -1026,7 +1021,7 @@ public class H4header {
     }
 
     public int compareTo(Vinfo o) {
-      return refno - o.refno;
+      return Short.compare(refno, o.refno);
     }
 
     void setData(TagData data, int elemSize) throws IOException {
@@ -1362,7 +1357,7 @@ public class H4header {
 
     List<DataChunk> getDataChunks() throws IOException {
       if (dataChunks == null) {
-        dataChunks = new ArrayList<DataChunk>();
+        dataChunks = new ArrayList<>();
 
         // read the chunk table - stored as a Structure in the data
         if (debugChunkTable) System.out.println(" TagData getChunkedTable " + detail());
@@ -1406,13 +1401,6 @@ public class H4header {
         sbuff.append(" ").append(sp_tag_header[i]);
       return sbuff.toString();
     }
-  }
-
-  private String printa(int[] array) {
-    StringBuilder sbuff = new StringBuilder();
-    for (int i = 0; i < array.length; i++)
-      sbuff.append(" ").append(array[i]);
-    return sbuff.toString();
   }
 
   static class DataChunk {
@@ -1508,7 +1496,7 @@ public class H4header {
 
     List<TagLinkedBlock> getLinkedDataBlocks() throws IOException {
       if (linkedDataBlocks == null) {
-        linkedDataBlocks = new ArrayList<TagLinkedBlock>();
+        linkedDataBlocks = new ArrayList<>();
         if (debugLinked) System.out.println(" TagData readLinkTags " + detail());
         short next = link_ref; // (short) (link_ref & 0x3FFF);
         while (next != 0) {
@@ -1691,7 +1679,8 @@ public class H4header {
 
     public String detail() {
       return super.detail() + " xdim=" + xdim + " ydim=" + ydim + " nelems=" + nelems +
-          " nt_ref=" + nt_ref + " interlace=" + interlace + " compress=" + compress;
+          " nt_ref=" + nt_ref + " interlace=" + interlace + " compress=" +
+          compress + " compress_ref=" + compress_ref;
     }
   }
 
@@ -1717,7 +1706,6 @@ public class H4header {
     short rank, nt_ref;
     int[] shape;
     short[] nt_ref_scale;
-    List<Dimension> dims;
 
     TagSDDimension(short code) throws IOException {
       super(code);
@@ -1772,7 +1760,7 @@ public class H4header {
     }
 
     private List<String> getList() {
-      List<String> result = new ArrayList<String>(text.length);
+      List<String> result = new ArrayList<>(text.length);
       for (String s : text)
         if (s.trim().length() > 0)
           result.add(s.trim());
@@ -2046,7 +2034,7 @@ public class H4header {
   } */
 
   private class MemTracker {
-    private List<Mem> memList = new ArrayList<Mem>();
+    private List<Mem> memList = new ArrayList<>();
     private StringBuilder sbuff = new StringBuilder();
 
     private long fileSize;
@@ -2092,7 +2080,7 @@ public class H4header {
       debugOut.println(sbuff.toString());
     }
 
-    class Mem implements Comparable {
+    class Mem implements Comparable<Mem> {
       public String name;
       public long start, end;
 
@@ -2102,9 +2090,8 @@ public class H4header {
         this.end = end;
       }
 
-      public int compareTo(Object o1) {
-        Mem m = (Mem) o1;
-        return (int) (start - m.start);
+      public int compareTo(Mem m) {
+        return Long.compare(start, m.start);
       }
 
     }
@@ -2114,62 +2101,5 @@ public class H4header {
     return alltags;
   }
 
-  ///////////////////////////////////////////////////
-  /// testing
-
-  static class MyNetcdfFile extends NetcdfFile {
-  }
-
-  static void readAllDir(String dirName, boolean subdirs) throws IOException {
-    System.out.println("---------------Reading directory " + dirName);
-    File allDir = new File(dirName);
-    File[] allFiles = allDir.listFiles();
-    if (null == allFiles) {
-      System.out.println("---------------INVALID " + dirName);
-      return;
-    }
-
-    for (File f : allFiles) {
-      String name = f.getAbsolutePath();
-      if (name.endsWith(".hdf"))
-        test(name);
-    }
-
-    for (File f : allFiles) {
-      if (f.isDirectory() && subdirs)
-        readAllDir(f.getAbsolutePath(), subdirs);
-    }
-  }
-
-  private static boolean showFile = true;
-
-  static void testPelim(String filename) throws IOException {
-    try (RandomAccessFile raf = new RandomAccessFile(filename, "r")) {
-      NetcdfFile ncfile = new MyNetcdfFile();
-      H4header header = new H4header();
-      header.read(raf, ncfile);
-      if (showFile) System.out.println(ncfile);
-    }
-  }
-
-  static void test(String filename) throws IOException {
-    try (NetcdfFile ncfile = NetcdfFile.open(filename)) {
-      if (showFile) System.out.println(ncfile);
-    }
-  }
-
-  static void testTagid(short tag, short refno) throws IOException {
-    System.out.format(" tag= %#x refno=%#x tagid=%#x %n", tag, refno, tagid(refno, tag));
-  }
-
-  static public void main(String args[]) throws IOException {
-    testTagid((short) 123, (short) -12);
-    testTagid((short) 123, (short) -5385);
-
-    /* H4header.setDebugFlags(new ucar.nc2.util.DebugFlagsImpl("H4header/tag1 H4header/tagDetail")); // H4header/construct"));
-    String filename1 = "eos/modis/MOD04_243.1850.hdf";
-    //ucar.unidata.io.RandomAccessFile.setDebugAccess(true);
-    test("C:/data/hdf4/" + filename1); */
-  }
 }
 

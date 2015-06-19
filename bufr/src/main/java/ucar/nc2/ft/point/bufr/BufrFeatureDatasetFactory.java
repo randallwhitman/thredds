@@ -34,6 +34,7 @@
 package ucar.nc2.ft.point.bufr;
 
 import org.jdom2.Element;
+import thredds.client.catalog.Catalog;
 import ucar.ma2.*;
 import ucar.nc2.Attribute;
 import ucar.nc2.Structure;
@@ -47,7 +48,6 @@ import ucar.nc2.ft.*;
 import ucar.nc2.ft.point.*;
 import ucar.nc2.iosp.IOServiceProvider;
 import ucar.nc2.iosp.bufr.BufrIosp2;
-import ucar.nc2.ncml.NcMLReader;
 import ucar.nc2.time.CalendarDate;
 import ucar.nc2.time.CalendarDateRange;
 import ucar.nc2.units.DateUnit;
@@ -110,7 +110,7 @@ public class BufrFeatureDatasetFactory implements FeatureDatasetFactory {
 
   private void show(Element parent, Indent indent) {
     if (parent == null) return;
-    for (Element child : parent.getChildren("fld", NcMLReader.ncNS)) {
+    for (Element child : parent.getChildren("fld", Catalog.ncmlNS)) {
       String idx = child.getAttributeValue("idx");
       String fxy = child.getAttributeValue("fxy");
       String name = child.getAttributeValue("name");
@@ -125,7 +125,7 @@ public class BufrFeatureDatasetFactory implements FeatureDatasetFactory {
   private void processSeq(Structure struct, Element parent) throws IOException {
     if (parent == null || struct == null) return;
     List<Variable> vars = struct.getVariables();
-    for (Element child : parent.getChildren("fld", NcMLReader.ncNS)) {
+    for (Element child : parent.getChildren("fld", Catalog.ncmlNS)) {
       String idxS = child.getAttributeValue("idx");
       int idx = Integer.parseInt(idxS);
       if (idx < 0 || idx >= vars.size()) {
@@ -177,7 +177,7 @@ public class BufrFeatureDatasetFactory implements FeatureDatasetFactory {
         super(name, null, null);
 
         // need  the center id to match the standard fields
-        Attribute centerAtt = ncfile.findGlobalAttribute(BufrIosp2.centerId);
+        Attribute centerAtt = netcdfDataset.findGlobalAttribute(BufrIosp2.centerId);
         int center = (centerAtt == null) ? 0 : centerAtt.getNumericValue().intValue();
         this.extract = new StandardFields.StandardFieldsFromStructure(center, obs);
 

@@ -33,11 +33,10 @@
 package ucar.nc2.iosp.bufr;
 
 import org.jdom2.Element;
-import thredds.catalog.DataFormatType;
+import ucar.nc2.constants.DataFormatType;
 import ucar.ma2.*;
 
 import ucar.nc2.*;
-//import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.iosp.AbstractIOServiceProvider;
 import ucar.nc2.util.CancelTask;
 
@@ -87,7 +86,7 @@ public class BufrIosp2 extends AbstractIOServiceProvider {
 
   @Override
   public void open(RandomAccessFile raf, NetcdfFile ncfile, CancelTask cancelTask) throws IOException {
-    this.raf = raf;
+    super.open(raf, ncfile, cancelTask);
 
     scanner = new MessageScanner(raf);
     protoMessage = scanner.getFirstDataMessage();
@@ -331,7 +330,7 @@ public class BufrIosp2 extends AbstractIOServiceProvider {
 
   @Override
   public String getFileTypeId() {
-    return DataFormatType.BUFR.toString();
+    return DataFormatType.BUFR.getDescription();
   }
 
   @Override

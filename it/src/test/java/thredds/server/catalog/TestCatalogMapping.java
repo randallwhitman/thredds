@@ -1,11 +1,13 @@
 package thredds.server.catalog;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import thredds.TestWithLocalServer;
-import thredds.catalog.InvCatalogImpl;
+import thredds.client.catalog.Catalog;
 import ucar.nc2.util.IO;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,9 +20,10 @@ import java.util.List;
  * @since 10/23/13
  */
 @RunWith(Parameterized.class)
+@Category(NeedsCdmUnitTest.class)
 public class TestCatalogMapping {
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static List<Object[]> getTestParameters() {
 
     List<Object[]> result = new ArrayList<Object[]>(10);
@@ -50,11 +53,11 @@ public class TestCatalogMapping {
   public void testRead() throws IOException {
 
     if (catPath.endsWith(".xml")) {
-      InvCatalogImpl cat = TestTdsLocal.open(catPath);
+      Catalog cat = TestTdsLocal.open(catPath);
       assert cat != null;
 
     }  else {
-      catPath = TestWithLocalServer.server + catPath;
+      catPath = TestWithLocalServer.withPath(catPath);
       System.out.printf("Open html page %s%n", catPath);
       IO.readURLcontentsWithException(catPath);
     }

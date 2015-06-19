@@ -32,27 +32,9 @@
  */
 package thredds.servlet;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import thredds.catalog.InvAccess;
-import thredds.catalog.InvCatalogImpl;
-import thredds.catalog.InvCatalogRef;
-import thredds.catalog.InvDataset;
-import thredds.catalog.InvDatasetImpl;
-import thredds.catalog.ServiceType;
+import thredds.catalog.*;
 import thredds.server.config.HtmlConfig;
 import thredds.server.config.TdsContext;
 import thredds.server.viewer.dataservice.ViewerService;
@@ -67,6 +49,16 @@ import ucar.nc2.time.CalendarDate;
 import ucar.nc2.units.DateType;
 import ucar.unidata.util.Format;
 import ucar.unidata.util.StringUtil2;
+
+import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
 
 /**
  * Provide methods to write HTML representations of a catalog, directory, or CDM dataset to an HTTP response.
@@ -301,7 +293,7 @@ public class HtmlWriter {
     }
   }
 
-  private void appendSimpleFooter(StringBuilder sb) {
+  public void appendSimpleFooter(StringBuilder sb) {
     sb.append("<h3>");
     if (this.htmlConfig.getInstallName() != null) {
       String installUrl = this.htmlConfig.prepareUrlStringForHtml(this.htmlConfig.getInstallUrl());
@@ -319,7 +311,7 @@ public class HtmlWriter {
       sb.append(this.htmlConfig.getHostInstName());
       if (hostInstUrl != null)
       sb.append("</a>");
-      sb.append(" see <a href='/thredds/serverInfo.html'> Info </a>");
+      sb.append(String.format(" see <a href='%s/serverInfo.html'> Info </a>", tdsContext.getContextPath()));
       sb.append("<br>\n");
     }
 
@@ -603,8 +595,7 @@ public class HtmlWriter {
     sb.append("</tr>");
 
     // Recursively render the datasets
-    boolean shade = false;
-    shade = doDatasets(cat, cat.getDatasets(), sb, shade, 0, isLocalCatalog);
+    doDatasets(cat, cat.getDatasets(), sb, false, 0, isLocalCatalog);
 
     // Render the page footer
     sb.append("</table>\r\n");
@@ -778,9 +769,6 @@ public class HtmlWriter {
       // Get last modified time.
       DateType lastModDateType = ds.getLastModifiedDate();
       if (lastModDateType == null) {
-        if (!ds.hasAccess())
-          sb.append("--");// "");
-        else
           sb.append("--");// "Unknown");
       } else {
         sb.append(lastModDateType.toDateTimeString());

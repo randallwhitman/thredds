@@ -44,7 +44,6 @@ import ucar.nc2.units.SimpleUnit;
 import ucar.nc2.util.CancelTask;
 import ucar.nc2.dataset.*;
 import ucar.nc2.dataset.transform.WRFEtaTransformBuilder;
-
 import ucar.unidata.geoloc.*;
 import ucar.unidata.geoloc.projection.*;
 import ucar.unidata.util.StringUtil2;
@@ -53,6 +52,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * WRF netcdf output files.
@@ -227,8 +228,6 @@ map_proj =  1: Lambert Conformal
       dataVar.addAttribute(new Attribute(_Coordinate.Systems, "LatLonCoordSys"));
 
     } else {
-
-
       double lat1 = findAttributeDouble(ds, "TRUELAT1");
       double lat2 = findAttributeDouble(ds, "TRUELAT2");
       double centralLat = findAttributeDouble(ds, "CEN_LAT");  // center of grid
@@ -272,20 +271,12 @@ map_proj =  1: Lambert Conformal
           for (Variable v : vlist) {
             if (v.getShortName().startsWith("XLAT")) {
               v.addAttribute(new Attribute(_Coordinate.AxisType, AxisType.Lat.toString()));
-              int[] shape = v.getShape();
-              if (v.getRank() == 3 && shape[0] == 1) { // remove time dependcies - MAJOR KLUDGE
-                List<Dimension> dims = v.getDimensions();
-                dims.remove(0);
-                v.setDimensions(dims);
-              }
+              removeConstantTimeDim(ds, v);
+
             } else if (v.getShortName().startsWith("XLONG")) {
               v.addAttribute(new Attribute(_Coordinate.AxisType, AxisType.Lon.toString()));
-              int[] shape = v.getShape();
-              if (v.getRank() == 3 && shape[0] == 1) { // remove time dependcies - MAJOR KLUDGE
-                List<Dimension> dims = v.getDimensions();
-                dims.remove(0);
-                v.setDimensions(dims);
-              }
+              removeConstantTimeDim(ds, v);
+
             } else if (v.getShortName().equals("T")) { // ANOTHER MAJOR KLUDGE to pick up 4D fields
               v.addAttribute(new Attribute(_Coordinate.Axes, "Time XLAT XLONG z"));
             } else if (v.getShortName().equals("U")) {
@@ -343,6 +334,21 @@ map_proj =  1: Lambert Conformal
     ds.addCoordinateAxis(makeSoilDepthCoordAxis(ds, "ZS"));
 
     ds.finish();
+  }
+
+  private void removeConstantTimeDim(NetcdfDataset ds, Variable v) {
+    int[] shape = v.getShape();
+    if (v.getRank() == 3 && shape[0] == 1) { // remove time dependcies - MAJOR KLUDGE
+      Variable view = null;
+      try {
+        view = v.slice(0, 0);
+      } catch (InvalidRangeException e) {
+        log.error("Cant remove first dimension in variable {}", v);
+        return;
+      }
+      ds.removeVariable(null, v.getShortName());
+      ds.addVariable(null, view);
+    }
   }
 
   private Array convertToDegrees(Variable v) {
@@ -575,10 +581,27 @@ map_proj =  1: Lambert Conformal
 
     if (timeData instanceof ArrayChar) {
       ArrayChar.StringIterator iter = ((ArrayChar) timeData).getStringIterator();
+      String testTimeStr = ((ArrayChar) timeData).getString(0);
+      boolean isCanonicalIsoStr = true;
+      // Maybe too specific to require WRF to give 10 digits or 
+      //  dashes for the date (e.g. yyyy-mm-dd)?
+      final String wrfDateWithUnderscore = "([\\-\\d]{10})_";
+      final Pattern wrfDateWithUnderscorePattern = Pattern.compile(wrfDateWithUnderscore);
+      Matcher m = wrfDateWithUnderscorePattern.matcher(testTimeStr);
+      if (wrfDateWithUnderscorePattern.matcher(testTimeStr) != null) {
+    	  isCanonicalIsoStr = false;  
+      }
+      
       while (iter.hasNext()) {
         String dateS = iter.next();
         try {
-          CalendarDate cd = CalendarDateFormatter.isoStringToCalendarDate(null, dateS);
+          CalendarDate cd;
+          if (isCanonicalIsoStr) {
+            cd = CalendarDateFormatter.isoStringToCalendarDate(null, dateS);
+          } else {
+        	cd = CalendarDateFormatter.isoStringToCalendarDate(null, dateS.replaceFirst("_", "T"));  
+          }
+          
           values.set(count++, (double) cd.getMillis() / 1000);
 
         } catch (IllegalArgumentException e) {

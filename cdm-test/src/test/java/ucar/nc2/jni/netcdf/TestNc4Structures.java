@@ -35,11 +35,14 @@
 
 package ucar.nc2.jni.netcdf;
 
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import ucar.ma2.InvalidRangeException;
 import ucar.nc2.*;
 import ucar.nc2.util.CancelTaskImpl;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 
 import java.io.IOException;
@@ -50,12 +53,15 @@ import java.io.IOException;
  * @author caron
  * @since 5/12/14
  */
+@Category(NeedsCdmUnitTest.class)
 public class TestNc4Structures {
 
   @Before
   public void setLibrary() {
-    Nc4Iosp.setLibraryAndPath("/opt/netcdf/lib", "netcdf");
-    System.out.printf("Nc4Iosp.isClibraryPresent = %s%n", Nc4Iosp.isClibraryPresent());
+    // Ignore this class's tests if NetCDF-4 isn't present.
+    // We're using @Before because it shows these tests as being ignored.
+    // @BeforeClass shows them as *non-existent*, which is not what we want.
+    Assume.assumeTrue("NetCDF-4 C library not present.", Nc4Iosp.isClibraryPresent());
   }
 
   @Test

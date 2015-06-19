@@ -32,7 +32,7 @@
  */
 package ucar.nc2.iosp.hdf5;
 
-import thredds.catalog.DataFormatType;
+import ucar.nc2.constants.DataFormatType;
 import ucar.ma2.*;
 
 import ucar.nc2.constants.CDM;
@@ -43,9 +43,7 @@ import ucar.nc2.iosp.hdf4.HdfEos;
 import ucar.nc2.iosp.hdf4.H4header;
 import ucar.nc2.*;
 
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.ByteArrayOutputStream;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Formatter;
@@ -64,9 +62,9 @@ public class H5iosp extends AbstractIOServiceProvider {
   static boolean debug = false;
   static boolean debugPos = false;
   static boolean debugHeap = false;
+  static boolean debugHeapStrings = false;
   static boolean debugFilter = false;
   static boolean debugRead = false;
-  static boolean debugString = false;
   static boolean debugFilterIndexer = false;
   static boolean debugChunkIndexer = false;
   static boolean debugVlen = false;
@@ -95,8 +93,8 @@ public class H5iosp extends AbstractIOServiceProvider {
 
   public String getFileTypeId() {
     if (isEos) return "HDF5-EOS";
-    if (headerParser.isNetcdf4()) return DataFormatType.NETCDF4.toString();
-    return DataFormatType.HDF5.toString();
+    if (headerParser.isNetcdf4()) return DataFormatType.NETCDF4.getDescription();
+    return DataFormatType.HDF5.getDescription();
   }
 
   public String getFileTypeDescription() {
@@ -124,7 +122,6 @@ public class H5iosp extends AbstractIOServiceProvider {
   // reading
 
   public void open(RandomAccessFile raf, ucar.nc2.NetcdfFile ncfile, ucar.nc2.util.CancelTask cancelTask) throws IOException {
-
     super.open(raf, ncfile, cancelTask);
     headerParser = new H5header(this.raf, ncfile, this);
     headerParser.read(null);
@@ -149,7 +146,7 @@ public class H5iosp extends AbstractIOServiceProvider {
     H5header.Vinfo vinfo = (H5header.Vinfo) v2.getSPobject();
     DataType dataType = v2.getDataType();
     Object data;
-    Layout layout;
+    Layout layout = null;
 
     if (vinfo.useFillValue) { // fill value only
       Object pa = IospHelper.makePrimitiveArray((int) wantSection.computeSize(), dataType, vinfo.getFillValue());
@@ -163,7 +160,11 @@ public class H5iosp extends AbstractIOServiceProvider {
       assert vinfo.isChunked;
       ByteOrder bo = (vinfo.typeInfo.endian == 0) ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN;
       layout = new H5tiledLayoutBB(v2, wantSection, raf, vinfo.mfp.getFilters(), bo);
-      data = IospHelper.readDataFill((LayoutBB) layout, v2.getDataType(), vinfo.getFillValue());
+      if (vinfo.typeInfo.isVString) {
+        data = readFilteredStringData((LayoutBB) layout);
+      } else{
+        data = IospHelper.readDataFill((LayoutBB) layout, v2.getDataType(), vinfo.getFillValue());
+      }
 
     } else { // normal case
       if (debug) System.out.println("read variable " + v2.getFullName() + " vinfo = " + vinfo);
@@ -210,6 +211,22 @@ public class H5iosp extends AbstractIOServiceProvider {
       return Array.factory(dataType.getPrimitiveClassType(), wantSection.getShape(), data);
   }
 
+  public String[] readFilteredStringData(LayoutBB layout) throws java.io.IOException {
+    int size = (int) layout.getTotalNelems();
+    String[] sa = new String[size];
+    while (layout.hasNext()) {
+      LayoutBB.Chunk chunk = layout.next();
+      ByteBuffer bb = chunk.getByteBuffer();
+      //bb.position(chunk.getSrcElem());
+      if (debugHeapStrings) System.out.printf("readFilteredStringData chunk=%s%n", chunk);
+      int destPos = (int) chunk.getDestElem();
+      for (int i = 0; i < chunk.getNelems(); i++) { // 16 byte "heap ids"
+        sa[destPos++] = headerParser.readHeapString(bb, (chunk.getSrcElem() + i) * 16); // LOOK does this handle section correctly ??
+      }
+    }
+    return sa;
+  }
+
   /*
    * Read data subset from file for a variable, return Array or java primitive array.
    *
@@ -247,11 +264,9 @@ public class H5iosp extends AbstractIOServiceProvider {
       return Array.factory(dataType.getPrimitiveClassType(), shape, data);
     }
 
-    if ((typeInfo.hdfType == 9) && !typeInfo.isVString) { // vlen (not string)
+    if (typeInfo.isVlen) { // vlen (not string)
       DataType readType = dataType;
-      if (typeInfo.isVString) // string
-        readType = DataType.BYTE;
-      else if (typeInfo.base.hdfType == 7) // reference
+      if (typeInfo.base.hdfType == 7) // reference
         readType = DataType.LONG;
 
       // general case is to read an array of vlen objects
@@ -569,23 +584,21 @@ public class H5iosp extends AbstractIOServiceProvider {
 
   public String getDetailInfo() {
     Formatter f = new Formatter();
-    ByteArrayOutputStream ff = new ByteArrayOutputStream(100 * 1000);
+    ByteArrayOutputStream os = new ByteArrayOutputStream(100 * 1000);
+    PrintWriter pw = new PrintWriter( new OutputStreamWriter(os, CDM.utf8Charset));
+
     try {
-      NetcdfFile ncfile = new FakeNetcdfFile();
+      NetcdfFile ncfile = new NetcdfFileSubclass();
       H5header detailParser = new H5header(raf, ncfile, this);
-      detailParser.read(new PrintStream(ff));
-      f.format("%s",super.getDetailInfo());
-      f.format("%s",ff.toString(CDM.UTF8));
+      detailParser.read(pw);
+      f.format("%s", super.getDetailInfo());
+      f.format("%s", os.toString(CDM.UTF8));
 
     } catch (IOException e) {
       e.printStackTrace();
-      e.printStackTrace(new PrintStream(ff));
     }
 
     return f.toString();
-  }
-
-  static private class FakeNetcdfFile extends NetcdfFile {
   }
 
   // debug
@@ -599,9 +612,8 @@ public class H5iosp extends AbstractIOServiceProvider {
       return headerParser;
 
     if (message.toString().equals("headerEmpty")) {
-      NetcdfFile ncfile = new FakeNetcdfFile();
-      H5header headerEmpty = new H5header(raf, ncfile, this);
-      return headerEmpty;
+      NetcdfFile ncfile = new NetcdfFileSubclass();
+      return new H5header(raf, ncfile, this);
     }
 
     return super.sendIospMessage(message);

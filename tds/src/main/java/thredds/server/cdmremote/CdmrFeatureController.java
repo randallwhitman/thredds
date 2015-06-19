@@ -33,7 +33,7 @@
 
 package thredds.server.cdmremote;
 
-import org.springframework.web.servlet.mvc.AbstractCommandController;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.validation.BindException;
 import org.jdom2.Document;
@@ -71,14 +71,15 @@ import ucar.unidata.util.StringUtil2;
  * Controller for CdmrFeature service.
  * At the moment, only handles station time series
  *
- * @Deprecatred deprecated in favor of CdmrfController
+ * @Deprecated deprecated in favor of CdmrfController
  *
  * @author caron
  * @since May 28, 2009
  *  
  */
 @Deprecated
-public class CdmrFeatureController extends AbstractCommandController { // implements LastModified {
+@Controller
+public class CdmrFeatureController { // implements LastModified {
   private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CdmrFeatureController.class);
   private static boolean debug = false, showTime = false, showReq = false;
 
@@ -99,8 +100,8 @@ public class CdmrFeatureController extends AbstractCommandController { // implem
   private TdsContext tdsContext;
 
   public CdmrFeatureController() {
-    setCommandClass(CdmRemoteQueryBean.class);
-    setCommandName("PointQueryBean");
+//    setCommandClass(CdmRemoteQueryBean.class);
+//    setCommandName("PointQueryBean");
   }
 
   public void setTdsContext(TdsContext tdsContext) {
@@ -261,7 +262,6 @@ public class CdmrFeatureController extends AbstractCommandController { // implem
   }
 
   private ModelAndView processData(HttpServletRequest req, HttpServletResponse res, FeatureDatasetPoint fdp, String path, CdmRemoteQueryBean qb) throws IOException {
-    long start = 0;
 
     switch (fdp.getFeatureType()) {
       case POINT:
@@ -432,7 +432,7 @@ public class CdmrFeatureController extends AbstractCommandController { // implem
     NetcdfFile ncfile = fdp.getNetcdfFile(); // LOOK will fail
     NcStreamWriter ncWriter = new NcStreamWriter(ncfile, absPath);
     //WritableByteChannel wbc = Channels.newChannel(out);
-    long size = ncWriter.sendHeader(out);
+    ncWriter.sendHeader(out);
     NcStream.writeVInt(out, 0);
 
     out.flush();

@@ -37,15 +37,10 @@ import com.coverity.security.Escape;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import thredds.catalog.*;
-import thredds.catalog.dl.*;
-
-import java.io.*;
-import java.net.*;
-import javax.annotation.PostConstruct;
-import javax.servlet.*;
-import javax.servlet.http.*;
-
+import thredds.catalog.InvCatalogFactory;
+import thredds.catalog.InvCatalogImpl;
+import thredds.catalog.dl.ADNWriter;
+import thredds.catalog.dl.DIFWriter;
 import thredds.server.config.TdsContext;
 import thredds.servlet.HtmlWriter;
 import thredds.servlet.ServletUtil;
@@ -54,6 +49,14 @@ import thredds.util.ContentType;
 import ucar.nc2.constants.CDM;
 import ucar.nc2.util.IO;
 import ucar.unidata.util.StringUtil2;
+
+import javax.annotation.PostConstruct;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * Servlet handles creating DL records.
@@ -84,9 +87,13 @@ public class DLwriterController {
     difDir = contentPath + "/dif/";
 
     File file = new File(adnDir);
-    file.mkdirs();
+    if(!file.exists() && !file.mkdirs())
+        logServerStartup.warn("Error creating directory: " + file.getPath());
+
     file = new File(difDir);
-    file.mkdirs();
+    if(!file.exists() && !file.mkdirs())
+        logServerStartup.warn("Error creating directory: " + file.getPath());
+
     logServerStartup.info("DLwriterServlet.init() - done: ");
   }
 
@@ -163,7 +170,8 @@ public class DLwriterController {
     if (!catalog.check(sb, false)) {
       res.setContentType(ContentType.html.getContentHeader());
       res.setHeader("Validate", "FAIL");
-      PrintWriter pw = new PrintWriter(res.getOutputStream());
+      PrintWriter pw = new PrintWriter(new OutputStreamWriter(
+              res.getOutputStream(), CDM.utf8Charset));
       showValidationMesssage(catURI.toString(), sb.toString(), pw);
       pw.flush();
       return;

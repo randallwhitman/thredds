@@ -33,13 +33,17 @@
 package ucar.nc2.iosp.bufr;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.util.IO;
 import ucar.unidata.io.RandomAccessFile;
-import java.io.*;
-import java.util.Formatter;
-
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.Formatter;
 
 /**
  * Sanity check on reading bufr messages
@@ -47,8 +51,10 @@ import ucar.unidata.test.util.TestDir;
  * @author caron
  * @since Apr 1, 2008
  */
+@Category(NeedsCdmUnitTest.class)
 public class TestBufrRead {
   String unitDir =  TestDir.cdmUnitTestDir + "formats/bufr";
+  boolean show = false;
 
   class MyFileFilter implements java.io.FileFilter {
     public boolean accept(File pathname) {
@@ -121,7 +127,7 @@ public class TestBufrRead {
           Message m = scan.next();
           if (m == null) continue;
           int nobs = m.getNumberDatasets();
-          System.out.printf(" %3d nobs = %4d (%s) center = %s table=%s cat=%s ", count++, nobs, m.getHeader(),
+          if (show) System.out.printf(" %3d nobs = %4d (%s) center = %s table=%s cat=%s ", count++, nobs, m.getHeader(),
                   m.getLookup().getCenterNo(), m.getLookup().getTableName(), m.getLookup().getCategoryNo());
           assert m.isTablesComplete() : "incomplete tables";
 
@@ -138,7 +144,7 @@ public class TestBufrRead {
           }
 
           totalObs += nobs;
-          System.out.printf("%n");
+          if (show) System.out.printf("%n");
 
         } catch (Exception e) {
           e.printStackTrace();

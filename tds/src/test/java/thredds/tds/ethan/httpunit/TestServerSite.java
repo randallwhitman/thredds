@@ -41,14 +41,15 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import thredds.catalog.InvCatalogFactory;
 import thredds.catalog.InvCatalogImpl;
+import ucar.unidata.test.util.ThreddsServer;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.*;
-import java.util.Properties;
 import java.security.cert.Certificate;
+import java.util.Properties;
 
 /**
  * A description
@@ -82,8 +83,10 @@ public class TestServerSite extends TestCase
     super( name );
   }
 
+  @Override
   protected void setUp()
   {
+    ThreddsServer.LIVE.assumeIsAvailable();
     wc = new WebConversation();
 
     Properties env = System.getProperties();

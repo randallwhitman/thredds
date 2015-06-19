@@ -33,21 +33,20 @@
 
 package ucar.nc2.util.net;
 
-import org.apache.http.Header;
-import org.junit.Ignore;
-
-import ucar.httpservices.*;
-import org.apache.http.Header;
-import org.apache.http.auth.*;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
-import ucar.nc2.util.EscapeStrings;
+import ucar.httpservices.*;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.*;
 import java.util.List;
-import java.util.Map;
 
 public class TestAuth extends UnitTestCommon
 {
@@ -56,6 +55,11 @@ public class TestAuth extends UnitTestCommon
     static protected final String MODULE = "httpclient";
 
     static protected final boolean IGNORE = true;
+
+    /**
+     * Temporary data directory (for writing temporary data).
+     */
+    static public String TEMPROOT = "target/test/tmp/"; // relative to module root
 
     // Add a temporary control for remote versus localhost
     static boolean remote = false;
@@ -75,6 +79,7 @@ public class TestAuth extends UnitTestCommon
 
     static String temppath = null;
 
+
     static {
         //todo: Register the 8843 protocol to test client side keys
         // HTTPSession.registerProtocol("https", 8843,
@@ -84,9 +89,7 @@ public class TestAuth extends UnitTestCommon
         HTTPSession.TESTING = true;
         HTTPCachingProvider.TESTING = true;
         HTTPAuthStore.TESTING = true;
-        // Make sure temp file exist
-        temppath = threddsRoot + "/" + MODULE + "/" + TEMPROOT;
-        new File(temppath).mkdirs();
+
     }
 
     //////////////////////////////////////////////////
@@ -119,7 +122,7 @@ public class TestAuth extends UnitTestCommon
         {
             UsernamePasswordCredentials creds = new UsernamePasswordCredentials(username, password);
             System.err.printf("TestCredentials.getCredentials called: creds=|%s| host=%s port=%d%n",
-                creds.toString(), scope.getHost(), scope.getPort());
+                    creds.toString(), scope.getHost(), scope.getPort());
             this.callcount++;
             return creds;
         }
@@ -134,14 +137,14 @@ public class TestAuth extends UnitTestCommon
 
         // Serializable Interface
         private void writeObject(java.io.ObjectOutputStream oos)
-            throws IOException
+                throws IOException
         {
             oos.writeObject(this.username);
             oos.writeObject(this.password);
         }
 
         private void readObject(java.io.ObjectInputStream ois)
-            throws IOException, ClassNotFoundException
+                throws IOException, ClassNotFoundException
         {
             this.username = (String) ois.readObject();
             this.password = (String) ois.readObject();
@@ -169,6 +172,9 @@ public class TestAuth extends UnitTestCommon
     {
         super(name);
         setTitle("DAP Authorization tests");
+        // Make sure temp file exist
+        temppath = getThreddsroot() + "/" + MODULE + "/" + TEMPROOT;
+        new File(temppath).mkdirs();
     }
 
     public TestAuth(String name)
@@ -181,12 +187,17 @@ public class TestAuth extends UnitTestCommon
         this("TestAuth", null);
     }
 
+    @Before
+    public void setUp() {
+        ThreddsServer.REMOTETEST.assumeIsAvailable();
+    }
+
     @Test
     public void
     testSSH() throws Exception
     {
         String[] sshurls = {
-            "https://" + TestDir.remoteTestServer + "/dts/b31.dds"
+                "https://" + TestDir.dap2TestServer + "/dts/b31.dds"
         };
 
         System.out.println("*** Testing: Simple Https");
@@ -218,13 +229,13 @@ public class TestAuth extends UnitTestCommon
     }
 
     protected AuthDataBasic[] basictests = {
-        new AuthDataBasic("http://" + TestDir.remoteTestServer + "/thredds/restricted/basicAuth",
-            "remoteUser", "remotePassword"),
+            new AuthDataBasic("http://" + TestDir.threddsTestServer + "/thredds/restricted/basicAuth",
+                    "remoteUser", "remotePassword"),
     };
 
     protected AuthDataBasic[] redirecttests = {
-        new AuthDataBasic("http://" + TestDir.remoteTestServer + "/thredds/dodsC/restrict/testData.nc.dds",
-            "tiggUser", "tigge"),
+            new AuthDataBasic("http://" + TestDir.threddsTestServer + "/thredds/dodsC/restrict/testData.nc.dds",
+                    "tiggUser", "tigge"),
     };
 
     @Test
@@ -292,7 +303,7 @@ public class TestAuth extends UnitTestCommon
                 session.clearState();
                 // Test global credentials provider
                 AuthScope scope
-                    = HTTPAuthScope.urlToScope(data.url, HTTPAuthPolicy.BASIC, null);
+                        = HTTPAuthScope.urlToScope(data.url, HTTPAuthPolicy.BASIC, null);
                 HTTPSession.setGlobalCredentials(scope, cred);
                 session = HTTPFactory.newSession(data.url);
                 method = HTTPFactory.Get(session);
@@ -316,7 +327,7 @@ public class TestAuth extends UnitTestCommon
 
         System.err.println("*** Testing: Cache Invalidation");
         // Clear the cache and the global authstore
-        HTTPAuthStore.DEFAULTS.clear();
+        HTTPAuthStore.getDefault().clear();
         HTTPCachingProvider.clearCache();
         for(AuthDataBasic data : basictests) {
             // Do each test with a bad password to cause cache invalidation
@@ -341,7 +352,7 @@ public class TestAuth extends UnitTestCommon
             if(removed.size() == 1) {
                 HTTPCachingProvider.Triple triple = removed.get(0);
                 pass = (triple.scope.getScheme().equals(HTTPAuthPolicy.BASIC.toUpperCase())
-                    && triple.creds instanceof UsernamePasswordCredentials);
+                        && triple.creds instanceof UsernamePasswordCredentials);
             } else
                 pass = false;
 
@@ -369,7 +380,7 @@ public class TestAuth extends UnitTestCommon
         if(IGNORE) return; //ignore
         System.err.println("*** Testing: Digest Policy");
         // Clear the cache and the global authstore
-        HTTPAuthStore.DEFAULTS.clear();
+        HTTPAuthStore.getDefault().clear();
         HTTPCachingProvider.clearCache();
         HTTPSession.debugHeaders(true);
 
@@ -418,7 +429,7 @@ public class TestAuth extends UnitTestCommon
                 session.clearState();
                 // Test global credentials provider
                 AuthScope scope
-                    = HTTPAuthScope.urlToScope(data.url, HTTPAuthPolicy.BASIC, null);
+                        = HTTPAuthScope.urlToScope(data.url, HTTPAuthPolicy.BASIC, null);
                 HTTPSession.setGlobalCredentials(scope, cred);
                 session = HTTPFactory.newSession(data.url);
                 method = HTTPFactory.Get(session);
@@ -455,7 +466,7 @@ public class TestAuth extends UnitTestCommon
         String server;
         String path;
         if(remote) {
-            server = TestDir.remoteTestServer;
+            server = TestDir.dap2TestServer;
             path = "/dts/b31.dds";
         } else {
             server = "localhost:8843";
@@ -466,14 +477,14 @@ public class TestAuth extends UnitTestCommon
         System.err.println("*** URL: " + url);
 
         // See if the client keystore exists
-        String keystore = threddsRoot + KEYDIR + "/" + CLIENTKEY;
+        String keystore = getThreddsroot() + KEYDIR + "/" + CLIENTKEY;
         File tmp = new File(keystore);
         if(!tmp.exists() || !tmp.canRead())
             throw new Exception("Cannot read client key store: " + keystore);
 
         CredentialsProvider provider = new HTTPSSLProvider(keystore, CLIENTPWD);
         AuthScope scope
-            = HTTPAuthScope.urlToScope(url, HTTPAuthPolicy.SSL, null);
+                = HTTPAuthScope.urlToScope(url, HTTPAuthPolicy.SSL, null);
         HTTPSession.setGlobalCredentialsProvider(scope, provider);
 
         HTTPSession session = HTTPFactory.newSession(url);
@@ -506,24 +517,24 @@ public class TestAuth extends UnitTestCommon
         Credentials cred2 = new UsernamePasswordCredentials("u2", "pwd2");
         AuthScope scope;
         scope = new AuthScope(
-            "http://ceda.ac.uk/dap/neodc/casix/seawifs_plankton/data/monthly/PSC_monthly_1998.nc.dds",
-            AuthScope.ANY_PORT, AuthScope.ANY_REALM,
-            HTTPAuthPolicy.BASIC);
+                "http://ceda.ac.uk/dap/neodc/casix/seawifs_plankton/data/monthly/PSC_monthly_1998.nc.dds",
+                AuthScope.ANY_PORT, AuthScope.ANY_REALM,
+                HTTPAuthPolicy.BASIC);
         // Add some entries to an HTTPAuthStore
         HTTPAuthStore store = new HTTPAuthStore();
 
         scope = HTTPAuthScope.urlToScope(
-            "http://ceda.ac.uk/dap/neodc/casix/seawifs_plankton/data/monthly/PSC_monthly_1998.nc.dds",
-            HTTPAuthPolicy.BASIC, null);
+                "http://ceda.ac.uk/dap/neodc/casix/seawifs_plankton/data/monthly/PSC_monthly_1998.nc.dds",
+                HTTPAuthPolicy.BASIC, null);
         store.insert(HTTPAuthScope.ANY_PRINCIPAL, scope, credp1);
 
         scope = HTTPAuthScope.urlToScope("http://ceda.ac.uk",
-            HTTPAuthPolicy.SSL, null);
+                HTTPAuthPolicy.SSL, null);
 
         store.insert(HTTPAuthScope.ANY_PRINCIPAL, scope, credp2);
 
         scope = HTTPAuthScope.urlToScope("http://ceda.ac.uk",
-            HTTPAuthPolicy.BASIC, null);
+                HTTPAuthPolicy.BASIC, null);
         store.insert(HTTPAuthScope.ANY_PRINCIPAL, scope, credp3);
 
         // Remove any old file
@@ -547,7 +558,7 @@ public class TestAuth extends UnitTestCommon
                 block:
                 {
                     if(!HTTPAuthScope.equivalent(row.scope, e.scope)
-                        && row.provider.getClass() == e.provider.getClass())
+                            && row.provider.getClass() == e.provider.getClass())
                         break block;
                     if(match == null)
                         match = e;

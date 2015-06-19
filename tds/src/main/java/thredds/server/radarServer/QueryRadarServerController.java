@@ -114,9 +114,9 @@ public class QueryRadarServerController extends AbstractController {
     }
   }
 
-  static SimpleDateFormat dateFormat;
+  private final SimpleDateFormat dateFormat;
 
-  static {
+  public QueryRadarServerController() {
     dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
     dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
   }
@@ -134,7 +134,7 @@ public class QueryRadarServerController extends AbstractController {
    * @throws Exception
    */
   //@RequestMapping(value = {"/radarServer/**/*?*"}, method = RequestMethod.GET)
-  @RequestMapping(value = "/radarServer/**/*", method = {RequestMethod.GET, RequestMethod.HEAD})
+//  @RequestMapping(value = "/radarServer/**/*", method = {RequestMethod.GET, RequestMethod.HEAD})
   protected ModelAndView handleRequestInternal(HttpServletRequest request, HttpServletResponse response) throws Exception {
     DatasetRepository.init(tdsContext);
 
@@ -578,7 +578,7 @@ public class QueryRadarServerController extends AbstractController {
   /*
    * Used to store the information about a dataset
    */
-  public class DatasetEntry {
+  public static class DatasetEntry {
 
     private String name;
 

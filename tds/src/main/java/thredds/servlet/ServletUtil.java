@@ -34,6 +34,8 @@
 package thredds.servlet;
 
 import java.io.*;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 import java.util.*;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -42,13 +44,9 @@ import javax.servlet.http.*;
 
 import thredds.util.ContentType;
 import ucar.nc2.constants.CDM;
-import ucar.nc2.util.CancelTask;
-import ucar.nc2.util.cache.FileCache;
 import ucar.nc2.util.IO;
 import thredds.catalog.XMLEntityResolver;
 import thredds.util.RequestForwardUtils;
-import ucar.nc2.util.cache.FileCacheable;
-import ucar.nc2.util.cache.FileFactory;
 import ucar.nc2.util.EscapeStrings;
 import ucar.unidata.io.RandomAccessFile;
 import ucar.unidata.util.StringUtil2;
@@ -232,7 +230,7 @@ public class ServletUtil {
   public static void handleRequestForRawFile(String path, HttpServlet servlet, HttpServletRequest req, HttpServletResponse res)
       throws IOException {
     // Don't allow ".." directories in path.
-    if (path.indexOf("/../") != -1
+    if (path.contains("/../")
         || path.equals("..")
         || path.startsWith("../")
         || path.endsWith("/..")) {
@@ -242,7 +240,7 @@ public class ServletUtil {
 
     // Don't allow access to WEB-INF or META-INF directories.
     String upper = path.toUpperCase();
-    if (upper.indexOf("WEB-INF") != -1 || upper.indexOf("META-INF") != -1) {
+    if (upper.contains("WEB-INF") || upper.contains("META-INF")) {
       res.sendError(HttpServletResponse.SC_FORBIDDEN, "Path cannot contain \"WEB-INF\" or \"META-INF\".");
       return;
     }
@@ -341,13 +339,6 @@ public class ServletUtil {
   /**
    * Convenience routine used by handleRequestForContentFile()
    * and handleRequestForRootFile().
-   *
-   * @param pathPrefix
-   * @param path
-   * @param servlet
-   * @param req request
-   * @param res response
-   * @throws IOException on IO error
    */
   private static void handleRequestForContentOrRootFile(String pathPrefix, String path, HttpServlet servlet, HttpServletRequest req, HttpServletResponse res)
       throws IOException {
@@ -363,7 +354,7 @@ public class ServletUtil {
     }
 
     // Don't allow ".." directories in path.
-    if (path.indexOf("/../") != -1
+    if (path.contains("/../")
         || path.equals("..")
         || path.startsWith("../")
         || path.endsWith("/..")) {
@@ -476,14 +467,14 @@ public class ServletUtil {
     }
 
     // dontallow ..
-    if (filename.indexOf("..") != -1) {
+    if (filename.contains("..")) {
       res.sendError(HttpServletResponse.SC_FORBIDDEN);
       return;
     }
 
     // dont allow access to WEB-INF or META-INF
     String upper = filename.toUpperCase();
-    if (upper.indexOf("WEB-INF") != -1 || upper.indexOf("META-INF") != -1) {
+    if (upper.contains("WEB-INF") || upper.contains("META-INF")) {
       res.sendError(HttpServletResponse.SC_FORBIDDEN);
       return;
     }
@@ -491,15 +482,16 @@ public class ServletUtil {
     returnFile(servlet, req, res, new File(filename), contentType);
   }
 
-  static private FileCache fileCacheRaf;
-  static public void setFileCache( FileCache fileCache) { fileCacheRaf = fileCache; }
-  static public FileCache getFileCache( ) { return fileCacheRaf; }
+  /* static private FileCacheIF fileCacheRaf;
+  static public void setFileCache( FileCacheIF fileCache) { fileCacheRaf = fileCache; }
+  static public FileCacheIF getFileCache( ) { return fileCacheRaf; }
 
   private static final ucar.nc2.util.cache.FileFactory fileFactory = new FileFactory() {
     public FileCacheable open(String location, int buffer_size, CancelTask cancelTask, Object iospMessage) throws IOException {
-      return new ucar.unidata.io.RandomAccessFile(location, "r");
+      return RandomAccessFile.acquire(location);
     }
   };
+  */
 
   /**
    * Write a file to the response stream. Handles Range requests.
@@ -622,21 +614,19 @@ public class ServletUtil {
         res.addHeader("Content-Range", "bytes " + startPos + "-" + (endPos - 1) + "/" + fileSize);
         res.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
 
-        RandomAccessFile craf = null;
-        try {
-          craf = (RandomAccessFile) fileCacheRaf.acquire(fileFactory, filename, null);
+        try (RandomAccessFile  craf = RandomAccessFile.acquire(filename)) {
           IO.copyRafB(craf, startPos, contentLength, res.getOutputStream(), new byte[60000]);
           return;
-        } finally {
-          if (craf != null) fileCacheRaf.release(craf);
         }
       }
 
       // Return the file
       ServletOutputStream out = res.getOutputStream();
-      IO.copyFileB(file, out, 60000);
-      res.flushBuffer();
-      out.close();
+      IO.copyFileB(file, out, 60 * 1000);
+      /* try (WritableByteChannel cOut = Channels.newChannel(out)) {
+        IO.copyFileWithChannels(file, cOut);
+        res.flushBuffer();
+      } */
       if (debugRequest) log.debug("returnFile(): returnFile ok = " + filename);
     }
 
@@ -654,6 +644,11 @@ public class ServletUtil {
       String eName = e.getClass().getName(); // dont want compile time dependency on ClientAbortException
       if (eName.equals("org.apache.catalina.connector.ClientAbortException")) {
         log.debug("returnFile(): ClientAbortException while sending file: " + filename + " " + e.getMessage());
+        return;
+      }
+
+      if (e.getMessage().startsWith("File transfer not complete")) { // coming from FileTransfer.transferTo()
+        log.debug("returnFile() "+e.getMessage());
         return;
       }
 
@@ -763,7 +758,7 @@ public class ServletUtil {
       return -1;
 
     for (String name : files) {
-      if (name.indexOf(fileName) < 0) continue;
+      if (!name.contains(fileName)) continue;
       int pos = name.indexOf('~');
       if (pos < 0) continue;
       String ver = name.substring(pos + 1);
@@ -782,8 +777,7 @@ public class ServletUtil {
     File contentFile = new File(toDir + ".INIT");
     if (!contentFile.exists()) {
       IO.copyDirTree(fromDir, toDir);
-      contentFile.createNewFile();
-      return true;
+      return contentFile.createNewFile();
     }
     return false;
   }
@@ -800,10 +794,9 @@ public class ServletUtil {
       String message = t.getMessage();
       if (message == null) message = "NULL message " + t.getClass().getName();
       if (Debug.isSet("trustedMode")) { // security issue: only show stack if trusted
-        ByteArrayOutputStream bs = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(bs);
-        t.printStackTrace(ps);
-        message = new String(bs.toByteArray(), CDM.utf8Charset);
+        StringWriter sw = new StringWriter(10000);
+        t.printStackTrace(new PrintWriter(sw));
+        message = sw.toString();
       }
       log.error("handleException", t);
       t.printStackTrace(); // debugging - log.error not showing stack trace !!   
@@ -852,6 +845,7 @@ public class ServletUtil {
     try {
       out.println(" context.getResource('/'): " + context.getResource("/"));
     } catch (java.net.MalformedURLException e) {
+      logServerStartup.error("ServletUtil.showServletInfo", e);
     } // cant happen
     out.println(" context.getServerInfo(): " + context.getServerInfo());
     out.println("  name: " + getServerInfoName(context.getServerInfo()));
@@ -1110,9 +1104,7 @@ public class ServletUtil {
     out.println("<BODY><H1>Session Snoop</H1>");
 
     // Display the hit count for this page
-    out.println("You've visited this page " + count +
-        ((!(count.intValue() != 1)) ? " time." : " times."));
-
+    out.println("You've visited this page " + count + ((count == 1) ? " time." : " times."));
     out.println("<P>");
 
     out.println("<H3>Here is your saved session data:</H3>");

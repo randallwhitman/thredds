@@ -38,13 +38,12 @@ package ucar.nc2.util.net;
 import org.junit.Test;
 import thredds.catalog.InvCatalogFactory;
 import thredds.catalog.InvCatalogImpl;
-import ucar.httpservices.HTTPException;
 import ucar.httpservices.HTTPFactory;
 import ucar.httpservices.HTTPMethod;
 import ucar.httpservices.HTTPSession;
 import ucar.nc2.constants.CDM;
+import ucar.unidata.test.util.ThreddsServer;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -57,63 +56,53 @@ import java.net.URISyntaxException;
  * @since 3/5/14
  */
 public class TestStream {
-
   @Test
   public void testStream1() throws URISyntaxException {
+    ThreddsServer.LIVE.assumeIsAvailable();
     String catalogName = "http://thredds.ucar.edu/thredds/catalog.xml";
     URI catalogURI = new URI(catalogName);
 
-    HTTPSession client = null;
-    HTTPMethod m = null;
     try {
-      client = HTTPFactory.newSession(catalogName);
-      m = HTTPFactory.Get(client);
+      try (HTTPMethod m = HTTPFactory.Get(catalogName)) {
 
-      int statusCode = m.execute();
-      System.out.printf("status = %d%n", statusCode);
+        int statusCode = m.execute();
+        System.out.printf("status = %d%n", statusCode);
 
-      InputStream stream = m.getResponseBodyAsStream();
-      InvCatalogFactory reader = InvCatalogFactory.getDefaultFactory(true);
+        InputStream stream = m.getResponseBodyAsStream();
+        InvCatalogFactory reader = InvCatalogFactory.getDefaultFactory(true);
 
-      InvCatalogImpl catalog = reader.readXML(stream, catalogURI);
-      catalog.writeXML(System.out);
+        InvCatalogImpl catalog = reader.readXML(stream, catalogURI);
+        catalog.writeXML(System.out);
+      }
 
     } catch (IOException e) {
       e.printStackTrace();
-
-    } finally {
-      if (client != null) client.close();
     }
 
   }
 
   @Test
   public void testString() throws URISyntaxException {
+    ThreddsServer.LIVE.assumeIsAvailable();
     String catalogName = "http://thredds.ucar.edu/thredds/catalog.xml";
     URI catalogURI = new URI(catalogName);
 
-    HTTPSession client = null;
-    HTTPMethod m = null;
     try {
-      client = HTTPFactory.newSession(catalogName);
-      m = HTTPFactory.Get(client);
+      try (HTTPMethod m = HTTPFactory.Get(catalogName)) {
 
-      int statusCode = m.execute();
-      System.out.printf("status = %d%n", statusCode);
+        int statusCode = m.execute();
+        System.out.printf("status = %d%n", statusCode);
 
-      String stream = m.getResponseAsString(CDM.UTF8);
-      System.out.printf("cat = %s%n", stream);
+        String stream = m.getResponseAsString(CDM.UTF8);
+        System.out.printf("cat = %s%n", stream);
 
-      InvCatalogFactory reader = InvCatalogFactory.getDefaultFactory(true);
+        InvCatalogFactory reader = InvCatalogFactory.getDefaultFactory(true);
 
-      InvCatalogImpl catalog = reader.readXML(stream, catalogURI);
-      catalog.writeXML(System.out);
-
+        InvCatalogImpl catalog = reader.readXML(stream, catalogURI);
+        catalog.writeXML(System.out);
+      }
     } catch (IOException e) {
       e.printStackTrace();
-
-    } finally {
-      if (client != null) client.close();
     }
 
   }

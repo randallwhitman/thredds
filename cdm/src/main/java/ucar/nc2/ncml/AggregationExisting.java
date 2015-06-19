@@ -33,6 +33,7 @@
 
 package ucar.nc2.ncml;
 
+import thredds.client.catalog.Catalog;
 import thredds.inventory.MFile;
 import ucar.nc2.constants.CDM;
 import ucar.nc2.constants.CF;
@@ -182,7 +183,7 @@ public class AggregationExisting extends AggregationOuterDimension {
   // time units change - must read in time coords and convert, cache the results
   // must be able to be made into a CoordinateAxis1DTime
   protected void readTimeCoordinates(VariableDS timeAxis, CancelTask cancelTask) throws IOException {
-    List<CalendarDate> dateList = new ArrayList<CalendarDate>();
+    List<CalendarDate> dateList = new ArrayList<>();
     String timeUnits = null;
 
     // make concurrent
@@ -287,7 +288,7 @@ public class AggregationExisting extends AggregationOuterDimension {
       }
       if (lock == null) return;
 
-      PrintWriter out = new PrintWriter(fos);
+      PrintWriter out = new PrintWriter( new OutputStreamWriter(fos, CDM.utf8Charset));
       out.print("<?xml version='1.0' encoding='UTF-8'?>\n");
       out.print("<aggregation xmlns='http://www.unidata.ucar.edu/namespaces/netcdf/ncml-2.2' version='3' ");
       out.print("type='" + type + "' ");
@@ -371,7 +372,7 @@ public class AggregationExisting extends AggregationOuterDimension {
       map.put(ds.getId(), ds);
     }
 
-    List<Element> ncList = aggElem.getChildren("netcdf", NcMLReader.ncNS);
+    List<Element> ncList = aggElem.getChildren("netcdf", Catalog.ncmlNS);
     for (Element netcdfElemNested : ncList) {
       String id = netcdfElemNested.getAttributeValue("id");
       DatasetOuterDimension dod = (DatasetOuterDimension) map.get(id);
@@ -401,7 +402,7 @@ public class AggregationExisting extends AggregationOuterDimension {
 
       // if (dod.coordValue != null) continue; // allow ncml to override
 
-      List<Element> cacheElemList = netcdfElemNested.getChildren("cache", NcMLReader.ncNS);
+      List<Element> cacheElemList = netcdfElemNested.getChildren("cache", Catalog.ncmlNS);
       for (Element cacheElemNested : cacheElemList) {
         String varName = cacheElemNested.getAttributeValue("varName");
         CacheVar pv = findCacheVariable(varName);
@@ -421,6 +422,8 @@ public class AggregationExisting extends AggregationOuterDimension {
             //took = .001 * .001 * .001 * (System.nanoTime() - start);
             //if (debugPersist) System.out.println("  makeArray took = " + took + " sec nelems= "+data.getSize());
             pv.putData(id, data);
+            countCacheUse++;
+
           } catch (Exception e) {
             logger.warn("Error reading cached data ",e);
           }
@@ -442,5 +445,9 @@ public class AggregationExisting extends AggregationOuterDimension {
     if (cacheName == null) cacheName = ncDataset.getCacheName();
     return cacheName;
   }
+
+  //////////////////////////////////////////////////
+  // back door for testing
+  static public int countCacheUse = 0;
 
 }

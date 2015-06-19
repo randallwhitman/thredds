@@ -34,9 +34,10 @@
 package ucar.nc2.ui;
 
 import ucar.ma2.*;
+import ucar.ma2.DataType;
 import ucar.nc2.*;
 import ucar.nc2.constants.CDM;
-import ucar.nc2.ft.grid.impl.CoverageCSFactory;
+import ucar.nc2.ft.cover.impl.CoverageCSFactory;
 import ucar.nc2.time.*;
 import ucar.nc2.ui.widget.*;
 import ucar.nc2.ui.widget.PopupMenu;
@@ -45,13 +46,14 @@ import ucar.nc2.dataset.*;
 import ucar.nc2.constants._Coordinate;
 import ucar.nc2.constants.AxisType;
 import ucar.nc2.dt.grid.*;
-
 import ucar.unidata.util.Parameter;
 import ucar.util.prefs.PreferencesExt;
 import ucar.util.prefs.ui.*;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.List;
 import java.io.IOException;
@@ -154,7 +156,7 @@ public class CoordSysTable extends JPanel {
             ProjectionCT pct = (ProjectionCT) ct;
             if (pct.getProjection() != null) {
               infoTA.appendLine("    impl.class= " + pct.getProjection().getClass().getName());
-              pct.getProjection();
+              // pct.getProjection();
             }
           }
           if (ct instanceof VerticalCT) {
@@ -228,6 +230,22 @@ public class CoordSysTable extends JPanel {
 
     setLayout(new BorderLayout());
     add(split2, BorderLayout.CENTER);
+  }
+
+  public void summaryInfo(Formatter f) {
+    if (ds == null) return;
+    f.format("%s%n", ds.getLocation());
+    int ngrids = 0;
+
+    for (Object varo : varTable.getBeans()) {
+      VariableBean varBean = (VariableBean) varo;
+      if (varBean.getDataType().trim().equalsIgnoreCase("grid"))
+        ngrids++;
+    }
+    int ncoordSys = csTable.getBeans().size();
+    int ncoords = axisTable.getBeans().size();
+
+    f.format(" ngrids=%d, ncoords=%d, ncoordSys=%d%n", ngrids, ncoords, ncoordSys);
   }
 
   private BeanTable attTable;
@@ -344,10 +362,10 @@ public class CoordSysTable extends JPanel {
       if (axis instanceof CoordinateAxis1D) {
         CoordinateAxis1D axis1D = (CoordinateAxis1D) axis;
         double[] mids = axis1D.getCoordValues();
+        double[] diffs = new double[mids.length];
         for (int i = 0; i < mids.length - 1; i++)
-          mids[i] = mids[i + 1] - mids[i];
-        mids[mids.length - 1] = 0.0;
-        printArray("midpoint differences=", mids);
+          diffs[i] = mids[i + 1] - mids[i];
+        printArrays("midpoint differences", mids, diffs);
 
       } else if (axis instanceof CoordinateAxis2D) {
         CoordinateAxis2D axis2D = (CoordinateAxis2D) axis;
@@ -493,12 +511,22 @@ public class CoordSysTable extends JPanel {
   }
 
   private void printArray(String title, double vals[]) {
-    StringBuilder sbuff = new StringBuilder();
-    sbuff.append(" ").append(title);
+    Formatter sbuff = new Formatter();
+    sbuff.format(" %s=", title);
     for (double val : vals) {
-      sbuff.append(" ").append(val);
+      sbuff.format(" %f", val);
     }
-    sbuff.append("\n");
+    sbuff.format("%n");
+    infoTA.appendLine(sbuff.toString());
+  }
+
+  private void printArrays(String title, double vals[], double vals2[]) {
+    Formatter sbuff = new Formatter();
+    sbuff.format(" %s%n", title);
+    for (int i=0; i<vals.length; i++) {
+      sbuff.format(" %3d: %10.2f  %10.2f%n", i, vals[i], vals2[i]);
+    }
+    sbuff.format("%n");
     infoTA.appendLine(sbuff.toString());
   }
 
@@ -513,7 +541,7 @@ public class CoordSysTable extends JPanel {
     prefs.putBeanObject("InfoWindowBounds", infoWindow.getBounds());
     prefs.putInt("splitPos", split.getDividerLocation());
     prefs.putInt("splitPos2", split2.getDividerLocation());
-    if (infoWindow != null) prefs.putBeanObject("InfoWindowBounds", infoWindow.getBounds());
+    prefs.putBeanObject("InfoWindowBounds", infoWindow.getBounds());
     if (attWindow != null) prefs.putBeanObject("AttWindowBounds", attWindow.getBounds());
   }
 

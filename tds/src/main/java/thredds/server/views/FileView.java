@@ -45,8 +45,8 @@ import java.io.IOException;
 import thredds.servlet.Debug;
 import thredds.servlet.ServletUtil;
 import ucar.nc2.util.CancelTask;
-import ucar.nc2.util.cache.FileCache;
 import ucar.nc2.util.IO;
+import ucar.nc2.util.cache.FileCacheIF;
 import ucar.nc2.util.cache.FileCacheable;
 import ucar.nc2.util.cache.FileFactory;
 import ucar.unidata.io.RandomAccessFile;
@@ -73,21 +73,21 @@ import ucar.unidata.io.RandomAccessFile;
 public class FileView extends AbstractView {
   private static org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger( FileView.class );
 
-  private static final ucar.nc2.util.cache.FileFactory fileFactory = new FileFactory() {
+  /* private static final ucar.nc2.util.cache.FileFactory fileFactory = new FileFactory() {
     public FileCacheable open(String location, int buffer_size, CancelTask cancelTask, Object iospMessage) throws IOException {
-      return new ucar.unidata.io.RandomAccessFile(location, "r");
+      return RandomAccessFile.acquire(location);
     }
   };
 
-  private FileCache fileCacheRaf;
-  public void setFileCacheRaf( FileCache fileCacheRaf) { this.fileCacheRaf = fileCacheRaf; }
+  private FileCacheIF fileCacheRaf;
+  public void setFileCacheRaf( FileCacheIF fileCacheRaf) { this.fileCacheRaf = fileCacheRaf; }
 
   public void init() {
     if ( this.fileCacheRaf == null )
       this.fileCacheRaf = ServletUtil.getFileCache();
     if ( this.fileCacheRaf == null )
       throw new IllegalStateException( "FileCacheRaf not configured.");
-  }
+  } */
 
   protected void renderMergedOutputModel( Map model, HttpServletRequest req, HttpServletResponse res )
           throws Exception
@@ -220,16 +220,9 @@ public class FileView extends AbstractView {
         res.addHeader( "Content-Range", "bytes " + startPos + "-" + ( endPos - 1 ) + "/" + fileSize );
         res.setStatus( HttpServletResponse.SC_PARTIAL_CONTENT );
 
-        RandomAccessFile craf = null;
-        try
-        {
-          craf = (RandomAccessFile) fileCacheRaf.acquire( fileFactory, filename, null);
+        try (RandomAccessFile craf = RandomAccessFile.acquire( filename)) {
           IO.copyRafB( craf, startPos, contentLength, res.getOutputStream(), new byte[60000] );
           return;
-        }
-        finally
-        {
-          if ( craf != null ) fileCacheRaf.release( craf );
         }
       }
 

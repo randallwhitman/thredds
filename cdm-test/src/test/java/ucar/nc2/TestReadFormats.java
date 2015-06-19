@@ -1,7 +1,9 @@
 package ucar.nc2;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 
 import java.io.File;
@@ -18,6 +20,7 @@ import java.util.List;
  * @author caron
  * @since 2/28/11
  */
+@Category(NeedsCdmUnitTest.class)
 public class TestReadFormats {
   static int countGood = 0;
   static int countFail = 0;
@@ -35,6 +38,7 @@ public class TestReadFormats {
       if (name.endsWith(".gbx9")) return false;
       if (name.endsWith(".ncx")) return false;
       if (name.endsWith(".ncx2")) return false;
+      if (name.endsWith(".ncx3")) return false;
       if (name.endsWith(".java")) return false;
       if (name.endsWith(".jpg")) return false;
       if (name.endsWith(".tiff")) return false;
@@ -43,7 +47,7 @@ public class TestReadFormats {
       if (name.endsWith(".txt")) return false;
       if (name.endsWith(".xml")) return false;
 
-      if (name.endsWith(".unf") && pathname.getPath().contains("grads")) return false;
+      if (!name.endsWith(".ctl") && pathname.getPath().contains("grads")) return false;
       if (name.endsWith(".HDR") && pathname.getPath().contains("gtopo")) return false;
       return true;
     }
@@ -52,6 +56,15 @@ public class TestReadFormats {
   @Test
   public void testAllFormat() throws IOException {
     openAllInDir(TestDir.cdmUnitTestDir + "/formats", new MyFileFilter());
+    int countExclude = countTotal - countGood - countFail;
+    System.out.printf("Good=%d Fail=%d Exclude=%d%n", countGood, countFail, countExclude);
+    for (String f : failFiles) System.out.printf("  %s%n", f);
+    assert countFail == 0 : "Failed = "+countFail;
+  }
+
+  @Test
+  public void problem() throws IOException {
+    openAllInDir(TestDir.cdmUnitTestDir + "/formats/grib1", new MyFileFilter());
     int countExclude = countTotal - countGood - countFail;
     System.out.printf("Good=%d Fail=%d Exclude=%d%n", countGood, countFail, countExclude);
     for (String f : failFiles) System.out.printf("  %s%n", f);

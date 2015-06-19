@@ -5,7 +5,6 @@ import dap4.dap4shared.D4DSP;
 import dap4.dap4shared.DataCompiler;
 import dap4.dap4shared.HttpDSP;
 import dap4.servlet.DapCache;
-import dap4.test.util.DapTestCommon;
 import ucar.httpservices.*;
 import ucar.nc2.dataset.NetcdfDataset;
 
@@ -160,7 +159,6 @@ public class TestCDMClient extends DapTestCommon
     {
         super(name);
         DapCache.flush();
-        setSystemProperties();
         this.root = getDAP4Root();
         if(this.root == null)
             throw new Exception("dap4 root cannot be located");
@@ -181,7 +179,8 @@ public class TestCDMClient extends DapTestCommon
     chooseTestcases()
     {
         if(true) {
-            chosentests = locate("test_opaque_array.nc");
+            chosentests = locate("test_opaque.nc");
+            prop_visual = true;
         } else {
             for(ClientTest tc : alltestcases) {
                 chosentests.add(tc);

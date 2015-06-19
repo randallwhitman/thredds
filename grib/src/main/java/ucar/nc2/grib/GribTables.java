@@ -32,8 +32,6 @@
 
 package ucar.nc2.grib;
 
-import ucar.nc2.grib.grib2.Grib2Record;
-
 /**
  * Abstraction of GribTable for Grib Collections.
  * Still figuring out what the minimal need is
@@ -51,7 +49,11 @@ public interface GribTables {
 
   VertCoord.VertUnit getVertUnit(int code);
 
-  int addVariableHash(Object gribRecord);
+  String getGeneratingProcessName(int code);
+
+  String getGeneratingProcessTypeName(int code);
+
+  // int addVariableHash(Object gribRecord);
 
   public static interface Parameter {
     public int getDiscipline();
@@ -59,6 +61,8 @@ public interface GribTables {
     public int getCategory();
 
     public int getNumber();
+
+    public int getValue();
 
     public String getName();
 
@@ -69,6 +73,10 @@ public interface GribTables {
     public String getDescription();
 
     public String getId();
+
+    public Float getFill();
+
+    public Float getMissing();
   }
 
 

@@ -32,8 +32,10 @@
  */
 package ucar.nc2.dt.grid;
 
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -42,9 +44,9 @@ import java.util.List;
 
 @RunWith(Parameterized.class)
 public class TestReadAndCountDods {
-  static String base = "thredds:resolve:http://thredds.ucar.edu/thredds/";
+  static String base = "thredds:resolve:http://thredds-test.unidata.ucar.edu/thredds/";
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static List<Object[]> getTestParameters() {
     List<Object[]> result = new ArrayList<>();
 
@@ -53,13 +55,13 @@ public class TestReadAndCountDods {
     // Geopotential_height_surface put out 6 and 18Z, ngrids osc between 22 and 23
     result.add(new Object[]{"catalog/grib/NCEP/DGEX/Alaska_12km/files/latest.xml", -1, 11, 13, 8});
 
-    result.add(new Object[]{"catalog/grib/NCEP/GEFS/Global_1p0deg_Ensemble/members/files/latest.xml", 35, 11, 13, 6});
-    result.add(new Object[]{"grib/NCEP/GEFS/Global_1p0deg_Ensemble/derived/files/latest.xml", 70, 17, 16, 6}); // 63, 15, 14, 6});
+    result.add(new Object[]{"catalog/grib/NCEP/GEFS/Global_1p0deg_Ensemble/members/latest.xml", 35, 13, 13, 6});
+    result.add(new Object[]{"grib/NCEP/GEFS/Global_1p0deg_Ensemble/derived/latest.xml", 70, 13, 12, 6}); // 63, 15, 14, 6});
 
     // 133, 26, 27, 21 vs 133, 31, 29, 21
-    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_0p5deg/files/latest.xml", 133, -1, -1, 21});
-    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_onedeg/files/latest.xml", 133, 26, 27, 21});
-    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_2p5deg/files/latest.xml", 133, 24, 25, 21});
+    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_0p5deg/files/latest.xml", 135, -1, -1, 19});
+    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_onedeg/files/latest.xml", 135, 26, 27, 19});
+    result.add(new Object[]{"catalog/grib/NCEP/GFS/Global_2p5deg/files/latest.xml", 135, 24, 25, 19});
     // flipping between 23, 9, 11, 6 and 23, 12, 14, 6
     result.add(new Object[]{"catalog/grib/NCEP/GFS/N_Hemisphere_381km/files/latest.xml", 23, -1, -1, 6});
     // flipping between 50, 14, 15, 8 and  50, 11, 13, 8
@@ -82,7 +84,7 @@ public class TestReadAndCountDods {
     result.add(new Object[]{"catalog/grib/NCEP/NAM/Alaska_45km/noaaport/files/latest.xml", 21, 6, 8, 4});
     // flipping between 29, 12, 14, 9, and 29, 15, 15, 9
     result.add(new Object[]{"catalog/grib/NCEP/NAM/Alaska_95km/files/latest.xml", 29, -1, -1, 9});
-    result.add(new Object[]{"catalog/grib/NCEP/NAM/CONUS_20km/noaaport/files/latest.xml", 33, 9, 11, 7});
+    result.add(new Object[]{"catalog/grib/NCEP/NAM/CONUS_20km/noaaport/files/latest.xml", 33, 9, 11, 7});   // ngrids keeps bouning between 33 and 40
     result.add(new Object[]{"catalog/grib/NCEP/NAM/CONUS_80km/files/latest.xml", 41, 11, 13, 8});
 
     result.add(new Object[]{"catalog/grib/NCEP/RAP/CONUS_13km/files/latest.xml", 53, 12, 14, 9});
@@ -103,13 +105,16 @@ public class TestReadAndCountDods {
     this.nVertCooordAxes = nVertCooordAxes;
   }
 
-  @org.junit.Test
+  @Test
   public void readAndCount() throws Exception {
+    ThreddsServer.TEST.assumeIsAvailable();
     TestReadandCount.doOne(base, name, ngrids, ncoordSys, ncoordAxes, nVertCooordAxes);
   }
 
-  public void utestProblem() throws Exception {
-    TestReadandCount.doOne(base,"catalog/grib/NCEP/DGEX/Alaska_12km/files/latest.xml", 23, 11, 13, 8);
+  //@Test
+  public void testProblem() throws Exception {
+    ThreddsServer.TEST.assumeIsAvailable();
+    TestReadandCount.doOne("thredds:resolve:http://thredds-test.unidata.ucar.edu/thredds/",
+            "catalog/grib/NCEP/NAM/Alaska_11km/files/latest.xml", 59, 15, 18, 13);
   }
-
 }

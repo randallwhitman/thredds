@@ -32,15 +32,15 @@
 
 package thredds.tds.idd;
 
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.junit.Test;
+import ucar.unidata.test.util.ThreddsServer;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.ArrayList;
-
-import thredds.catalog.InvDataset;
 
 /**
  * _more_
@@ -59,17 +59,16 @@ public class CrawlRandomDatasetsOnMotherlodeTds
         this.datasetUrl = datasetUrl;
     }
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> getDatasetUrls()
-    {
+    @Parameterized.Parameters(name="{0}")
+    public static Collection<Object[]> getDatasetUrls() throws IOException {
         String tdsUrl = "http://thredds.ucar.edu/thredds/";
         StringBuilder log = new StringBuilder();
 
-        List<String> catalogUrls = new ArrayList<String>();
+        List<String> catalogUrls = new ArrayList<>();
         catalogUrls.addAll( StandardCatalogUtils.getIddDeepCatalogUrlList());
         catalogUrls.addAll( StandardCatalogUtils.getMlodeDeepCatalogUrlList() );
 
-        List<String> fullCatalogUrls = new ArrayList<String>();
+        List<String> fullCatalogUrls = new ArrayList<>();
         for ( String s : catalogUrls )
           fullCatalogUrls.add( tdsUrl + s);
 
@@ -89,6 +88,7 @@ public class CrawlRandomDatasetsOnMotherlodeTds
     @Test
     public void crawlDataset()
     {
+        ThreddsServer.LIVE.assumeIsAvailable();
         CatalogDatasetTestUtils.assertDatasetIsAccessible( this.datasetUrl);
     }
 }

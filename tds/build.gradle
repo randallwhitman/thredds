@@ -1,76 +1,96 @@
+description = "The THREDDS Data Server (TDS) is a web server that provides catalog and data access services for " +
+        "scientific data using OPeNDAP, OGC WCS and WMS, HTTP, and other remote-data-access protocols."
+ext.title = "THREDDS Data Server (TDS)"
+ext.url = "http://www.unidata.ucar.edu/software/thredds/current/tds/TDS.html"
+
 apply plugin: 'war'
 
 dependencies {
-  compile project(':bufr')
-  compile project(':cdm')
-  compile project(':clcommon')
-  compile project(':grib')
-  compile project(':netcdf4')
-  compile (project(':opendap')) { transitive = false }
-  compile (project(':tdcommon')) {
-    exclude group: "commons-logging"
-  }
-  compile (project(':visad')) { transitive = false }
-  compile project(':waterml')
+    compile project(":bufr")
+    compile project(":cdm")
+    compile project(":clcommon")
+    compile project(":grib")
+    compile project(":netcdf4")
+    compile project(":opendap")
+    compile project(":tdcommon")
+    runtime project(":visadCdm")
+    compile project(":waterml")
+    compile project(":dap4:d4core")
+    compile project(":dap4:d4servletshared")
 
-  compile ('com.coverity.security:coverity-escapers:1.1.1')
+    compile libraries["coverity-escapers"]
+    compile libraries["httpclient"]
+    compile libraries["httpcore"]
+    compile libraries["commons-fileupload"]
+    compile libraries["jdom2"]
+    compile libraries["quartz"]
+    compile libraries["commons-lang3"]
+    compile libraries["commons-io"]
+    compile libraries["jcip-annotations"]
+    compile libraries["guava"]
+    compile libraries["joda-time"]
+    compile libraries["52n-xml-waterML-v20"]
 
-  compile group: 'org.springframework', name: 'spring-context', version:springVersion
-  compile group: 'org.springframework', name: 'spring-beans', version:springVersion
-  compile group: 'org.springframework', name: 'spring-webmvc', version:springVersion
+    compile libraries["spring-core"]
+    compile libraries["spring-context"]
+    compile libraries["spring-beans"]
+    compile libraries["spring-web"]
+    compile libraries["spring-webmvc"]
 
-  /* compile (group: 'org.jasig.cas', name: 'cas-client-core', version: "3.1.10") {
-    transitive = false
-  } */
-  compile group: 'commons-fileupload', name: 'commons-fileupload', version: "1.3"
+    runtime libraries["threddsIso"]
+    compile libraries["ncwms"]
+    compile libraries["geoapi-pending"]
+    compile libraries["oro"]
 
-  // plug-in
-  runtime (group: 'EDS', name: 'threddsIso', version: "2.3.1")
+    provided libraries["javax.servlet-api"]
+    runtime libraries["jstl"]
+    compile libraries["validation-api"]
+    runtime libraries["hibernate-validator"]
+    runtime libraries["jaxen"]
 
-  // ncss
-  // JSR 303 with Hibernate Validator
-  compile group: 'javax.validation', name: 'validation-api', version: "1.0.0.GA"
-  compile group: 'org.hibernate', name: 'hibernate-validator', version: "4.1.0.Final"
-  compile (group: 'org.jfree', name: 'jfreechart', version: jfreechartVersion) {
-    exclude group: 'com.lowagie'
-  }
+    testCompile libraries["spring-test"]
+    testCompile libraries["hamcrest-core"]
+    testCompile libraries["httpunit"]
 
-  // wms
-  compile (group: 'uk.ac.rdg.resc', name: 'ncwms', version: "1.0.tds.4.4.20130828.1500-SNAPSHOT") {
-    exclude group: 'commons-logging'
-    exclude group: 'edu.ucar'
-    exclude group: 'joda-time'
-    exclude group: 'org.jfree'
-    exclude group: 'org.springframework'
-    exclude group: 'org.slf4j'
-  }
-  compile group: 'oro', name: 'oro', version: "2.0.8"
+    compile libraries["slf4j-api"]
+    runtime libraries["log4j-slf4j-impl"]
+    runtime libraries["log4j-core"]
+    runtime libraries["log4j-web"]
+}
 
-  providedCompile group: 'javax.servlet', name: 'javax.servlet-api', version:servletVersion
-  testCompile project(':cdm').sourceSets.test.output
-  testCompile group: 'org.springframework', name: 'spring-test', version:springVersion
-  testCompile group: 'httpunit', name: 'httpunit', version:'1.7'
+// Adds ':tds:prepareInplaceWebAppClasses', which ':it:integrationTest' depends on.
+apply plugin: 'org.akhikhl.gretty'
 
-  // logging
-  runtime group: 'org.apache.logging.log4j', name: 'log4j-core', version: log4jVersion
-  runtime group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: log4jVersion
-  runtime group: 'org.slf4j', name: 'jcl-over-slf4j', version: slf4jVersion
+test {
+    // From TDS's pom.xml. I guess these are excluded because they're pretty crufty?
+    exclude 'thredds/tds/**'
+}
+
+// Tests expect for test resources to be copied to the same directory as the test classes.
+processTestResources.destinationDir = compileTestJava.destinationDir
+
+processTestResources {
+    from "src/main/webapp"
+    from "src/main/webapp/WEB-INF/classes"
 }
 
 war {
-  manifest {
-    attributes 'Implementation-Version': version,
-            'Implementation-Title': 'THREDDS Data Server (TDS)',
-            'Implementation-Vendor': 'UCAR/Unidata',
-            'Implementation-Vendor-Id': 'edu.ucar',
-            'Built-On': new Date(),
-            'Build-Jdk': System.properties['java.version']
-  }
+    // Exclude tds.properties from the War CopySpec. We'll re-add it below, with filtering.
+    // TODO: Is there a less-awkward way to filter a single file when it's already part of a CopySpec?
+    exclude 'WEB-INF/classes/thredds/server/tds.properties'  // Relative to src/main/webapp/
 
+    // This is a hack to handle Maven-style placeholders in a file to be filtered: http://goo.gl/9sQebt
+    // Once Maven is out of the picture, the easiest way to refactor this is to remove the dots from the property
+    // keys, so that expand(Map) works as expected.
+    ant.properties['project.version'] = project.version
+    ant.properties['build.timestamp'] = project.buildTimestamp  // Defined in root project.
+
+    from ('src/main/webapp/WEB-INF/classes/thredds/server/tds.properties') {
+        into 'WEB-INF/classes/thredds/server'
+        filter(org.apache.tools.ant.filters.ExpandProperties, project: ant.project)
+    }
+    from('README.txt') {
+        into 'docs'
+        filter(org.apache.tools.ant.filters.ExpandProperties, project: ant.project)
+    }
 }
-
-task printProps << {
-  println System.properties['java.version'];
-  for (prop in System.properties.propertyNames()) printf("%s = %s%n", prop, System.properties[prop])
-}
-

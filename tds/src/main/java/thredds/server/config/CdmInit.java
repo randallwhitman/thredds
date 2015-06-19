@@ -43,12 +43,11 @@ import thredds.catalog.InvDatasetFeatureCollection;
 import thredds.catalog.parser.jdom.InvCatalogFactory10;
 import thredds.inventory.CollectionUpdater;
 import thredds.server.ncss.format.SupportedFormat;
-import thredds.servlet.ServletUtil;
 import thredds.servlet.ThreddsConfig;
 import thredds.util.LoggerFactorySpecial;
 import ucar.nc2.dataset.NetcdfDataset;
-import ucar.nc2.grib.collection.GribCollection;
-import ucar.nc2.grib.collection.PartitionCollection;
+import ucar.nc2.grib.GribIndexCache;
+import ucar.nc2.grib.collection.GribCdmIndex;
 import ucar.nc2.jni.netcdf.Nc4Iosp;
 import ucar.nc2.ncml.Aggregation;
 import ucar.nc2.thredds.ThreddsDataFactory;
@@ -56,6 +55,7 @@ import ucar.nc2.util.DiskCache;
 import ucar.nc2.util.DiskCache2;
 import ucar.nc2.util.cache.FileCache;
 import ucar.nc2.util.log.LoggerFactory;
+import ucar.unidata.io.RandomAccessFile;
 
 import java.io.File;
 import java.util.Calendar;
@@ -122,19 +122,16 @@ public class CdmInit implements InitializingBean,  DisposableBean{
     /* <Netcdf4Clibrary>
        <libraryPath>C:/cdev/lib/</libraryPath>
        <libraryName>netcdf4</libraryName>
-     </Netcdf4Clibrary> */
+     </Netcdf4Clibrary>
+    */
     String libraryPath = ThreddsConfig.get("Netcdf4Clibrary.libraryPath", null);
     String libraryName = ThreddsConfig.get("Netcdf4Clibrary.libraryName", null);
     if (libraryPath != null || libraryName != null){
       Nc4Iosp.setLibraryAndPath(libraryPath, libraryName);
-    } else {
-      Nc4Iosp.setWarnOff(); // if they dont have a Netcdf4Clibrary element, suppress warnings
     }
 
     //Netcdf4 library could be set as a environment variable or as a jvm parameter
-      if (!Nc4Iosp.isClibraryPresent()) {
-          startupLog.warn("netcdf4 c library not present jna_path='" + libraryPath + "' libname=" + libraryName + "");
-      } else {
+      if (Nc4Iosp.isClibraryPresent()) {
           FormatsAvailabilityService.setFormatAvailability(SupportedFormat.NETCDF4, true);
 //      FormatsAvailabilityService.setFormatAvailability(SupportedFormat.NETCDF4EXT, true);
 
@@ -152,7 +149,6 @@ public class CdmInit implements InitializingBean,  DisposableBean{
     // Disk Caching
     String dir;
     int scourSecs, maxAgeSecs;
-
 
     // Nj22 disk cache
     dir = ThreddsConfig.get("DiskCache.dir", new File( tdsContext.getContentDirectory(), "/cache/cdm/" ).getPath());
@@ -188,7 +184,7 @@ public class CdmInit implements InitializingBean,  DisposableBean{
     gribCache.setPolicy(gribIndexPolicy);
     gribCache.setAlwaysUseCache(gribIndexAlwaysUse);
     gribCache.setNeverUseCache(gribIndexNeverUse);
-    GribCollection.setDiskCache2(gribCache);
+    GribIndexCache.setDiskCache2(gribCache);
     startupLog.info("CdmInit: GribIndex="+gribCache);
 
     // LOOK is this used ??
@@ -201,7 +197,8 @@ public class CdmInit implements InitializingBean,  DisposableBean{
     startupLog.info("CdmInit:  CdmRemote= "+dir+" scour = "+scourSecs+" maxAgeSecs = "+maxAgeSecs);
 
 
-    // LOOK 4.5 not used ?? FMRC ????
+    // turn back on for 4.6 needed for FMRC
+    // turned off for 4.5 not used ??
     // new for 4.2 - feature collection caching
     // in 4.4, change name to FeatureCollectionCache, but keep old for backwards compatibility
     String fcCache = ThreddsConfig.get("FeatureCollectionCache.dir", null);
@@ -220,7 +217,7 @@ public class CdmInit implements InitializingBean,  DisposableBean{
 
     try {
       thredds.inventory.bdb.MetadataManager.setCacheDirectory(fcCache, maxSizeBytes, jvmPercent);
-      //LOOK thredds.inventory.CollectionManagerAbstract.setMetadataStore(thredds.inventory.bdb.MetadataManager.getFactory());
+      thredds.inventory.CollectionManagerAbstract.setMetadataStore(thredds.inventory.bdb.MetadataManager.getFactory());  // LOOK
       startupLog.info("CdmInit: CollectionManagerAbstract.setMetadataStore= "+fcCache);
     } catch (Exception e) {
       startupLog.error("CdmInit: Failed to open CollectionManagerAbstract.setMetadataStore= "+fcCache, e);
@@ -248,61 +245,64 @@ public class CdmInit implements InitializingBean,  DisposableBean{
 
     ///////////////////////////////////////////////
     // Object caching
+    int min, max, secs;
 
-    // NetcdfFileCache : default is allow 50 - 100 open files, cleanup every 11 minutes
-    int min = ThreddsConfig.getInt("NetcdfFileCache.minFiles", 50);
-    int max = ThreddsConfig.getInt("NetcdfFileCache.maxFiles", 100);
-    int secs = ThreddsConfig.getSeconds("NetcdfFileCache.scour", 11 * 60);
+    // RandomAccessFile: default is allow 400 - 500 open files, cleanup every 11 minutes
+    min = ThreddsConfig.getInt("RandomAccessFile.minFiles", 400);
+    max = ThreddsConfig.getInt("RandomAccessFile.maxFiles", 500);
+    secs = ThreddsConfig.getSeconds("RandomAccessFile.scour", 11 * 60);
+    if (max > 0) {
+      RandomAccessFile.setGlobalFileCache( new FileCache("RandomAccessFile", min, max, -1, secs));
+      startupLog.info("CdmInit: RandomAccessFile.initPartitionCache= ["+min+","+max+"] scour = "+secs);
+    }
+
+    // NetcdfFileCache : default is allow 100 - 150 open files, cleanup every 12 minutes
+    min = ThreddsConfig.getInt("NetcdfFileCache.minFiles", 100);
+    max = ThreddsConfig.getInt("NetcdfFileCache.maxFiles", 150);
+    secs = ThreddsConfig.getSeconds("NetcdfFileCache.scour", 12 * 60);
     if (max > 0) {
       NetcdfDataset.initNetcdfFileCache(min, max, secs);
-      startupLog.info("CdmInit  private boolean isNetcdf4Available = false;: NetcdfDataset.initNetcdfFileCache= ["+min+","+max+"] scour = "+secs);
+      startupLog.info("NetcdfDataset.initNetcdfFileCache= ["+min+","+max+"] scour = "+secs);
     }
 
-    // GribCollection partitions: default is allow 50 - 100 open files, cleanup every 12 minutes
-    min = ThreddsConfig.getInt("TimePartition.minFiles", 50);
-    max = ThreddsConfig.getInt("TimePartition.maxFiles", 100);
-    secs = ThreddsConfig.getSeconds("TimePartition.scour", 12 * 60);
+    // GribCollection partitions: default is allow 100 - 150 objects, cleanup every 13 minutes
+    min = ThreddsConfig.getInt("TimePartition.minFiles", 100);
+    max = ThreddsConfig.getInt("TimePartition.maxFiles", 150);
+    secs = ThreddsConfig.getSeconds("TimePartition.scour", 13 * 60);
     if (max > 0) {
-      PartitionCollection.initPartitionCache(min, max, secs);
-      startupLog.info("CdmInit: TimePartition.initPartitionCache= ["+min+","+max+"] scour = "+secs);
+      GribCdmIndex.initDefaultCollectionCache(min, max, secs);
+      startupLog.info("CdmInit: GribCdmIndex.initDefaultCollectionCache= ["+min+","+max+"] scour = "+secs);
     }
 
-    // GribCollection data files : default is allow 50 - 100 open files, cleanup every 13 minutes
-    min = ThreddsConfig.getInt("GribCollection.minFiles", 50);
-    max = ThreddsConfig.getInt("GribCollection.maxFiles", 100);
-    secs = ThreddsConfig.getSeconds("GribCollection.scour", 13 * 60);
-    if (max > 0) {
-      GribCollection.initDataRafCache(min, max, secs);
-      startupLog.info("CdmInit: GribCollection.initDataRafCache= ["+min+","+max+"] scour = "+secs);
-    }
-
-    // HTTP file access : // allow 10 - 20 open datasets, cleanup every 17 minutes
-    min = ThreddsConfig.getInt("HTTPFileCache.minFiles", 10);
-    max = ThreddsConfig.getInt("HTTPFileCache.maxFiles", 20);
-    secs = ThreddsConfig.getSeconds("HTTPFileCache.scour", 17 * 60);
-    if (max > 0) {
-      ServletUtil.setFileCache( new FileCache("HTTP File Cache", min, max, -1, secs));
-      startupLog.info("CdmInit: HTTPFileCache.initCache= [" + min + "," + max + "] scour = " + secs);
-    }
+    //RandomAccessFile.enableDefaultGlobalFileCache();
+    //RandomAccessFile.setDebugLeaks(true);
 
     startupLog.info("CdmInit complete");
   }
 
   //should be called when tomcat exits
   public void destroy() throws Exception {
+    // background threads
     if (timer != null) timer.cancel();
-    FileCache.shutdown();
+    FileCache.shutdown();              // this handles background threads for all instances of FileCache
     if (aggCache != null) aggCache.exit();
     if (gribCache != null) gribCache.exit();
     if (cdmrCache != null) cdmrCache.exit();
-    //if (cacheManager != null) cacheManager.close();
-    thredds.inventory.bdb.MetadataManager.closeAll();
+    thredds.inventory.bdb.MetadataManager.closeAll(); // LOOK used ??
     CollectionUpdater.INSTANCE.shutdown();
+
+    // open files caches
+    RandomAccessFile.shutdown();
+    NetcdfDataset.shutdown();
+
+    // memory caches
+    GribCdmIndex.shutdown();
+
     startupLog.info("CdmInit shutdown");
     MDC.clear();
   }
 
-  private class CacheScourTask extends TimerTask {
+  static private class CacheScourTask extends TimerTask {
     long maxBytes;
 
     CacheScourTask(long maxBytes) {

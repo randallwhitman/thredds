@@ -33,59 +33,69 @@
 
 package ucar.nc2.iosp.hdf4;
 
-import ucar.nc2.NetcdfFile;
-import ucar.nc2.Variable;
-
-import java.io.IOException;
-import java.io.File;
-
-import junit.framework.TestCase;
+import org.junit.AfterClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import ucar.nc2.util.DebugFlagsImpl;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+
 /**
- * Class Description.
+ * Read all hdf4 files in cdmUnitTestDir + "formats/hdf4/"
  *
  * @author caron
  */
-public class TestH4readAll extends TestCase {
+@RunWith(Parameterized.class)
+@Category(NeedsCdmUnitTest.class)
+public class TestH4readAll {
+  static private String testDir = TestDir.cdmUnitTestDir + "formats/hdf4/";
 
-  public TestH4readAll(String name) {
-    super(name);
+  @AfterClass
+  static public void after() {
+    H4header.setDebugFlags(new DebugFlagsImpl(""));  // make sure debug flags are off
   }
 
-  public void testReadAll() throws IOException {
-    //readandCountAllInDir(testDir, null);
-    int count = 0;
-    count += TestDir.readAllDir(TestDir.cdmUnitTestDir + "formats/hdf4/", new MyFileFilter());
-    System.out.println("***READ "+count+" files");
-    count += TestDir.readAllDir("D:/hdf4/", null);
-    System.out.println("***READ "+count+" files");
+  @Parameterized.Parameters(name="{0}")
+ 	public static Collection<Object[]> getTestParameters() throws IOException {
+    Collection<Object[]> filenames = new ArrayList<>();
+
+    try {
+      TestDir.actOnAllParameterized(testDir , new H4FileFilter(), filenames);
+      // TestDir.actOnAllParameterized("D:/hdf4/" , new H4FileFilter(), filenames);
+    } catch (IOException e) {
+      // JUnit *always* executes a test class's @Parameters method, even if it won't subsequently run the class's tests
+      // due to an @Category exclusion. Therefore, we must not let it throw an exception, or else we'll get a build
+      // failure. Instead, we return a collection containing a nonsense value (to wit, the exception message).
+      //
+      // Naturally, if we execute a test using that nonsense value, it'll fail. That's fine; we need to deal with the
+      // root cause. However, it is more likely that the exception occurred because "!isCdmUnitTestDirAvailable", and
+      // as a result, all NeedsCdmUnitTest tests will be excluded.
+      filenames.add(new Object[]{e.getMessage()});
+    }
+
+    return filenames;
+ 	}
+
+  String filename;
+  public TestH4readAll(String filename) {
+    this.filename = filename;
   }
 
-  class MyFileFilter implements java.io.FileFilter {
+  @Test
+  public void readAll() throws IOException {
+    TestDir.readAll(filename);
+  }
+
+  static class H4FileFilter implements java.io.FileFilter {
     public boolean accept(File pathname) {
       return pathname.getName().endsWith(".hdf") || pathname.getName().endsWith(".eos") || pathname.getName().endsWith(".h4");
     }
-  }
-
-  public void testProblems() throws IOException {
-    //readandCountAllInDir(testDir, null);
-    int count = TestDir.readAllDir("E:/problem/", null);
-    System.out.println("***READ "+count+" files");
-  }
-
-
-  public void problem() throws IOException {
-    H4header.setDebugFlags(new ucar.nc2.util.DebugFlagsImpl("H4header/tag1 H4header/tagDetail H4header/linked H4header/construct"));
-    //H4header.setDebugFlags(new ucar.nc2.util.DebugFlagsImpl("H4header/tag2 H4header/tagDetail H4header/construct"));
-    //H4header.setDebugFlags(new ucar.nc2.util.DebugFlagsImpl("H4header/linked"));
-
-    //TestAll.readAll("E:/problem/MAC021S0.A2007287.1920.002.2007289002404.hdf");
-
-    NetcdfFile ncfile = NetcdfFile.open("R:\\testdata\\hdf4\\c402_rp_02.diag.sfc.20020122_0130z.hdf");
-    Variable v = ncfile.findVariable("MOD_Grid_MOD17A2/Data Fields/PsnNet_1km");
-    assert v != null;
-    v.read();
-    ncfile.close();
   }
 }

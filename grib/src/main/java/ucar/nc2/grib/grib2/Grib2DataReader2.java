@@ -34,10 +34,18 @@
 package ucar.nc2.grib.grib2;
 
 import ucar.nc2.grib.GribNumbers;
+import ucar.nc2.grib.GribUtils;
 import ucar.nc2.iosp.BitReader;
 import ucar.unidata.io.RandomAccessFile;
 
+import java.awt.image.DataBuffer;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.util.Arrays;
 
 /**
  * Reads the data from one grib2 record.
@@ -108,6 +116,9 @@ public class Grib2DataReader2 {
       case 40:
         data = getData40(raf, (Grib2Drs.Type40) gdrs);
         break;
+      case 41:
+        data = getData41(raf, (Grib2Drs.Type0) gdrs);
+        break;
       case 50002:
         data = getData50002(raf, (Grib2Drs.Type50002) gdrs);
         break;
@@ -137,6 +148,7 @@ public class Grib2DataReader2 {
 
     if (dataTemplate != 40) return null;
 
+    // LOOK jpeg2k only
     return getData40raw(raf, (Grib2Drs.Type40) gdrs);
   }
 
@@ -168,7 +180,7 @@ public class Grib2DataReader2 {
   thanks to local redundancy. This is achieved just before packing, by splitting the whole set of scaled data values into
   groups, on which local references (such as local minima) are removed. It is done with some overhead, because extra
   descriptors are needed to manage the groups’ characteristics. An optional pre-processing of the scaled values (spatial
-  differencing) may also be applied before splitting into groups, and combined methods, along with use of alternate row
+  differencing) may also be applied before splittig into groups, and combined methods, along with use of alternate row
   scanning mode, are very efficient on interpolated data.
 
   (3) For spectral data, complex packing is provided for better accuracy of packing. This is because many spectral coefficients
@@ -743,7 +755,7 @@ public class Grib2DataReader2 {
       if (bitmap == null) { // must be one decoded value in idata for every expected data point
         if (idata.length != dataNPoints) {
           log.debug("Number of points in the data record {} != {} expected from GDS", idata.length, dataNPoints);
-          return null;
+          throw new IllegalStateException("Number of points in the data record {} != expected from GDS");
         }
 
         for (int i = 0; i < dataNPoints; i++) {
@@ -823,7 +835,66 @@ public class Grib2DataReader2 {
 
   }
 
-    // by jkaehler@meteomatics.com
+  // Loosely based on code by earl.barker.ctr AT us.af.mil, but moved from
+  // anceient version of Grib support.
+  // Code taken from esupport ticket ZVT-415274
+  public float[] getData41(RandomAccessFile raf, Grib2Drs.Type0 gdrs) throws IOException {
+    int nb = gdrs.numberOfBits;
+    int D = gdrs.decimalScaleFactor;
+    float DD = (float) java.lang.Math.pow((double) 10, (double) D);
+    float R = gdrs.referenceValue;
+    int E = gdrs.binaryScaleFactor;
+    float EE = (float) java.lang.Math.pow( 2.0, (double) E);
+
+    // LOOK: can # datapoints differ from bitmap and data ?
+    // dataPoints are number of points encoded, it could be less than the
+    // totalNPoints in the grid record if bitMap is used, otherwise equal
+    float[] data = new float[totalNPoints];
+
+    // no data to decode, set to reference value
+    if (nb == 0) {
+      Arrays.fill(data, R);
+      return data;
+    }
+
+    //  Y * 10**D = R + (X1 + X2) * 2**E
+    //   E = binary scale factor
+    //   D = decimal scale factor
+    //   R = reference value
+    //   X1 = 0
+    //   X2 = scaled encoded value
+    //   data[ i ] = (R + ( X1 + X2) * EE)/DD ;
+
+    byte[] buf = new byte[dataLength - 5];
+    raf.readFully(buf);
+    InputStream in = new ByteArrayInputStream(buf);
+    BufferedImage image = ImageIO.read(in);
+
+    if (nb != image.getColorModel().getPixelSize())
+      log.debug("PNG pixel size disagrees with grib number of bits: ",
+              image.getColorModel().getPixelSize(), nb);
+
+    DataBuffer db = image.getRaster().getDataBuffer();
+    if (bitmap == null) {
+      for (int i = 0; i < dataNPoints; i++) {
+//        data[i] = (R + imageData[i] * EE) / DD;
+        data[i] = (R + db.getElem(i) * EE) / DD;
+      }
+    } else {
+      for (int bitPt = 0, dataPt = 0; bitPt < totalNPoints; bitPt++) {
+        if ((bitmap[bitPt / 8] & GribNumbers.bitmask[bitPt % 8]) != 0) {
+//          data[i] = (R + imageData[i] * EE) / DD;
+          data[bitPt] = (R + db.getElem(dataPt++) * EE) / DD;
+        } else {
+          data[bitPt] = staticMissingValue;
+        }
+      }
+    }
+
+    return data;
+  }
+
+  // by jkaehler@meteomatics.com
   // ported from https://github.com/erdc-cm/grib_api/blob/master/src/grib_accessor_class_data_g1second_order_general_extended_packing.c
   public float[] getData50002(RandomAccessFile raf, Grib2Drs.Type50002 gdrs) throws IOException {
 
@@ -946,7 +1017,9 @@ public class Grib2DataReader2 {
  128    1 0 Points of first row or column scan in the +i (+x) direction
           1 Points of first row or column scan in the –i (–x) direction
  64     2 0 Points of first row or column scan in the –j (–y) direction
-          1 Points of first row or column scan in the +j (+y) direction
+
+
+
  32     3 0 Adjacent points in i (x) direction are consecutive
           1 Adjacent points in j (y) direction is consecutive
  16     4 0 All rows scan in the same direction
@@ -958,20 +1031,50 @@ public class Grib2DataReader2 {
         (3) If bit number 4 is set, the first row scan is as defined by previous flags.
    */
 
+  /*
+  Flag table 3.4 – Scanning mode
+  Bit No. Value Meaning
+  1 0 Points of first row or column scan in the +i (+x) direction
+    1 Points of first row or column scan in the –i (–x) direction
+  2 0 Points of first row or column scan in the –j (–y) direction
+    1 Points of first row or column scan in the +j (+y) direction
+  3 0 Adjacent points in i (x) direction are consecutive
+    1 Adjacent points in j (y) direction is consecutive
+  4 0 All rows scan in the same direction
+    1 Adjacent rows scans in the opposite direction
+  5–8 Reserved
+
+  Code Table Flag table 3.4 - Scanning mode (3.4)
+      1: Points of first row or column scan in the +i (+x) direction
+      1: Points of first row or column scan in the -i (-x) direction
+      2: Points of first row or column scan in the -j (-y) direction
+      2: Points of first row or column scan in the +j (+y) direction
+      3: Adjacent points in i (x) direction are consecutive
+      3: Adjacent points in j (y) direction is consecutive
+      4: All rows scan in the same direction
+      4: Adjacent rows scans in the opposite direction
+      5: Points within odd rows are not offset in i (x) direction
+      5: Points within odd rows are offset by Di/2 in i (x) direction
+      6: Points within even rows are not offset in i (x) direction
+      6: Points within even rows are offset by Di/2 in i (x) direction
+      7: Points are not offset in j (y) direction
+      7: Points are offset by Dj/2 in j (y) direction
+      8: Rows have Ni grid points and columns have Nj grid points
+      8: Rows have Ni grid points if points are not offset in i direction Rows have Ni-1 grid points if points are offset by Di/2 in i direction
+         Columns have Nj grid points if points are not offset in j direction Columns have Nj-1 grid points if points are offset by Dj/2 in j direction
+   */
+
   // Rearrange the data array using the scanning mode.
   // LOOK: not handling scanMode generally
-  // LOOK It appears that this handles x but noy y (!); ?? Probably correcting for it in the y coordinate, eg Dy
   // LOOK might be wrong for a quasi regular (thin) grid ??
   private void scanningModeCheck(float[] data, int scanMode, int Xlength) {
     // Mode  0  +x, -y, adjacent x, adjacent rows same dir
     // Mode  64 +x, +y, adjacent x, adjacent rows same dir
-    if ((scanMode == 0) || (scanMode == 64))
+    if ((scanMode == 0) || (scanMode == 64))  // dont flip Y - handle it in the HorizCoordSys
       return;
 
-      // Mode  128 -x, -y, adjacent x, adjacent rows same dir
-      // Mode  192 -x, +y, adjacent x, adjacent rows same dir
-      // change -x to +x ie east to west -> west to east
-    if ((scanMode == 128) || (scanMode == 192)) {
+    // change -x to +x ie east to west -> west to east
+    if (!GribUtils.scanModeXisPositive(scanMode)) {
       float tmp;
       int mid = Xlength / 2;
       for (int index = 0; index < data.length; index += Xlength) {
@@ -984,17 +1087,17 @@ public class Grib2DataReader2 {
       return;
     }
 
-    // else
-    // scanMode == 16, 80, 144, 208 adjacent rows scan opposite dir
-    float tmp;
-    int mid = Xlength / 2;
-    for (int index = 0; index < data.length; index += Xlength) {
-      int row = index / Xlength;
-      if (row % 2 != 0) {  // odd numbered row, calculate reverse index
-        for (int idx = 0; idx < mid; idx++) {
-          tmp = data[index + idx];
-          data[index + idx] = data[index + Xlength - idx - 1];
-          data[index + Xlength - idx - 1] = tmp;
+    if (!GribUtils.scanModeSameDirection(scanMode)) {
+      float tmp;
+      int mid = Xlength / 2;
+      for (int index = 0; index < data.length; index += Xlength) {
+        int row = index / Xlength;
+        if (row % 2 != 0) {  // odd numbered row, calculate reverse index
+          for (int idx = 0; idx < mid; idx++) {
+            tmp = data[index + idx];
+            data[index + idx] = data[index + Xlength - idx - 1];
+            data[index + Xlength - idx - 1] = tmp;
+          }
         }
       }
     }

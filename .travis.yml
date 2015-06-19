@@ -1,34 +1,28 @@
-jdk:
-  - oraclejdk7
-  - oraclejdk8
-  - openjdk7
+language: java
+sudo: false
 
 env:
   global:
-    - MAVEN_OPTS="-Djna.library.path=/usr/local/lib -DskipTests=false -DfailIfNoTests=false"
-    - NCVERSION=4.3.2
+    - LD_LIBRARY_PATH=${TRAVIS_BUILD_DIR}/travis/lib/ubuntu-12.04.5-amd64
+    - BUILD_IDV=false
 
-before_install:
-  - sudo apt-get install libhdf5-serial-dev
-  - wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-${NCVERSION}.tar.gz
-  - tar xf netcdf-${NCVERSION}.tar.gz
-  - cd netcdf-${NCVERSION}
-  - ./configure --prefix=/usr/local
-  - make
-  - make check || true
-  - sudo make install
-  - cd ..
-
-install:
-  - mvn install -DskipTests=true
+matrix:
+  include:
+    - jdk: oraclejdk7
+    - jdk: oraclejdk8
+    - jdk: openjdk7
+#      env: BUILD_IDV=true
 
 script:
-  - cd cdm && mvn test ${MAVEN_OPTS}
-  - cd ../udunits && mvn test ${MAVEN_OPTS}
-  - cd ../ui && mvn test ${MAVEN_OPTS}
-  - cd ../waterml && mvn test ${MAVEN_OPTS}
-  - cd ../dap4/d4tests && mvn test ${MAVEN_OPTS}
+  # If we need to do an IDV build, run the script
+  - if [[ $BUILD_IDV == true ]]; then
+      travis/build_idv.sh;
+    fi
+
+  - if [[ $BUILD_IDV == false ]]; then
+      ./gradlew --info testAll;
+    fi
 
 cache:
   directories:
-    - $HOME/.m2
+    - $HOME/.gradle

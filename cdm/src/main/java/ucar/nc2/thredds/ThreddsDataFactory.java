@@ -71,10 +71,13 @@ import java.io.IOException;
 public class ThreddsDataFactory {
   static public final String PROTOCOL = "thredds";
   static public final String SCHEME = PROTOCOL + ":";
-  static private boolean preferCdm = true;
+  static private ServiceType[] preferAccess;
 
   static public void setPreferCdm(boolean prefer) {
-    preferCdm = prefer;
+    preferAccess = prefer ? new ServiceType[] {ServiceType.CdmRemote} : null;
+  }
+  static public void setPreferAccess(ServiceType... prefer) {
+    preferAccess = prefer;
   }
 
   static public void setDebugFlags(ucar.nc2.util.DebugFlags debugFlag) {
@@ -247,11 +250,11 @@ public class ThreddsDataFactory {
     // special handling for DQC
     InvAccess qc = invDataset.getAccess(ServiceType.QC);
     if (qc != null) {
-      String dqc_location = qc.getStandardUrlName();
 
       if (result.featureType == FeatureType.STATION) {
 
         /* DqcFactory dqcFactory = new DqcFactory(true);
+        String dqc_location = qc.getStandardUrlName();
         QueryCapability dqc = dqcFactory.readXML(dqc_location);
         if (dqc.hasFatalError()) {
           result.errLog.append(dqc.getErrorMessages());
@@ -389,7 +392,7 @@ public class ThreddsDataFactory {
 
     IOException saveException = null;
 
-    List<InvAccess> accessList = new ArrayList<InvAccess>(invDataset.getAccess()); // a list of all the accesses
+    List<InvAccess> accessList = new ArrayList<>(invDataset.getAccess()); // a list of all the accesses
     while (accessList.size() > 0) {
       InvAccess access = chooseDatasetAccess(accessList);
 
@@ -410,7 +413,7 @@ public class ThreddsDataFactory {
       if (serviceType == ServiceType.RESOLVER) {
         InvDatasetImpl rds = openResolver(datasetLocation, task, result);
         if (rds == null) return null;
-        accessList = new ArrayList<InvAccess>(rds.getAccess());
+        accessList = new ArrayList<>(rds.getAccess());
         continue;
       }
 
@@ -503,7 +506,7 @@ public class ThreddsDataFactory {
 
     // open CdmRemote
     else if ((serviceType == ServiceType.HTTP) || (serviceType == ServiceType.HTTPServer)) {
-      String curl =  (datasetLocation.startsWith("http:")) ? "nodods:" + datasetLocation.substring(5) : datasetLocation;
+      String curl =  (datasetLocation.startsWith("http:")) ? "httpserver::" + datasetLocation.substring(5) : datasetLocation;
       ds = acquire ? NetcdfDataset.acquireDataset(curl, enhanceMode, task) : NetcdfDataset.openDataset(curl, enhanceMode, task);
     }
 
@@ -540,8 +543,17 @@ public class ThreddsDataFactory {
     if (accessList.size() == 0)
       return null;
 
+    InvAccess access = null;
+    if (preferAccess != null) {
+      for (ServiceType type : preferAccess) {
+        access = findAccessByServiceType(accessList, type);
+        if (access != null) break;
+      }
+    }
+
     // the order indicates preference
-    InvAccess access = findAccessByServiceType(accessList, ServiceType.CdmRemote);
+    if (access == null)
+      access = findAccessByServiceType(accessList, ServiceType.CdmRemote);
     if (access == null)
       access = findAccessByServiceType(accessList, ServiceType.DODS);
     if (access == null)
@@ -655,7 +667,7 @@ public class ThreddsDataFactory {
 
   private InvAccess getImageAccess(InvDataset invDataset, ucar.nc2.util.CancelTask task, Result result) {
 
-    List<InvAccess> accessList = new ArrayList<InvAccess>(invDataset.getAccess()); // a list of all the accesses
+    List<InvAccess> accessList = new ArrayList<>(invDataset.getAccess()); // a list of all the accesses
     while (accessList.size() > 0) {
       InvAccess access = chooseImageAccess(accessList);
       if (access != null) return access;
@@ -676,7 +688,7 @@ public class ThreddsDataFactory {
         return null;
 
 // use the access list from the resolved dataset
-      accessList = new ArrayList<InvAccess>(invDataset.getAccess());
+      accessList = new ArrayList<>(invDataset.getAccess());
     } // loop over accesses
 
     return null;

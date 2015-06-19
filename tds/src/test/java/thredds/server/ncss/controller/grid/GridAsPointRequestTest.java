@@ -37,6 +37,7 @@ package thredds.server.ncss.controller.grid;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
@@ -49,6 +50,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import thredds.junit4.SpringJUnit4ParameterizedClassRunner;
 import thredds.mock.web.MockTdsContextLoader;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -64,6 +66,7 @@ import java.util.Collection;
 @RunWith(SpringJUnit4ParameterizedClassRunner.class)
 @WebAppConfiguration
 @ContextConfiguration(locations = {"/WEB-INF/applicationContext-tdsConfig.xml"}, loader = MockTdsContextLoader.class)
+@Category(NeedsCdmUnitTest.class)
 public class GridAsPointRequestTest {
 
   @Autowired
@@ -76,9 +79,12 @@ public class GridAsPointRequestTest {
   @SpringJUnit4ParameterizedClassRunner.Parameters
   public static Collection<Object[]> getTestParameters() {
     return Arrays.asList(new Object[][] {
-           {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.html"},
-           {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/dataset.xml"},
-           {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.xml"},
+            {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.html"},
+            {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/dataset.xml"},
+            {"/ncss/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.xml"},
+            {"/ncss/grid/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.html"},
+            {"/ncss/grid/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/dataset.xml"},
+            {"/ncss/grid/testGridScan/GFS_CONUS_80km_20120229_1200.grib1/pointDataset.xml"},
     });
   }
 

@@ -31,13 +31,17 @@
  */
 package ucar.nc2.util.net;
 
-import ucar.httpservices.*;
-
-import junit.framework.TestCase;
-import org.apache.http.auth.*;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import ucar.httpservices.HTTPException;
+import ucar.httpservices.HTTPFactory;
+import ucar.httpservices.HTTPMethod;
+import ucar.httpservices.HTTPSession;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.util.TestDir;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
@@ -52,7 +56,7 @@ public class NoTestAuth2 extends UnitTestCommon
       public Data(String u,CredentialsProvider p) {this.url=u; this.provider=p;}
   }
     protected Data[] cases = new Data[] {
-      new Data("http://"+ TestDir.remoteTestServer+"/thredds/dodsC/restrict/testdata/testData.nc.html",
+      new Data("http://"+ TestDir.threddsTestServer+"/thredds/dodsC/restrict/testdata/testData.nc.html",
                new CredentialsProvider() {
                    public Credentials getCredentials(AuthScope scope) //AuthScheme sch, String h, int p, boolean pr)
                    {
@@ -65,36 +69,37 @@ public class NoTestAuth2 extends UnitTestCommon
                    public void setCredentials(AuthScope scope, Credentials creds) {}
                    public void clear() {}
                }),
-      new Data("https://"+TestDir.remoteTestServer+"/dts/b31.dds",null),
+      new Data("https://"+TestDir.dap2TestServer+"/dts/b31.dds",null),
     };
 
+  @Override
+  public void setUp() {
+    ThreddsServer.REMOTETEST.assumeIsAvailable();
+  }
 
   public void testAuth2() throws Exception
   {
     boolean pass = true;
     for(Data data: cases) {
-        HTTPSession session = HTTPFactory.newSession(data.url);
-        if(data.provider != null)
-            session.setCredentialsProvider(data.provider);
-        session.setUserAgent("tdmRunner");
-        HTTPSession.setGlobalUserAgent("TDM v4.3");
-        HTTPMethod m = null;
-        try {
-          System.out.printf("url %s%n", data.url);
-          m = HTTPFactory.Get(session);
-          int status = m.execute();
-          String s = m.getResponseAsString();
-          System.out.printf("Trigger response = %d == %s%n", status, s);
-          if(status != 200  && status != 404)
-              pass = false;
-        } catch (HTTPException e) {
-          System.err.println("Fail: "+data.url);
-          ByteArrayOutputStream bos = new ByteArrayOutputStream(10000);
-          e.printStackTrace(new PrintStream(bos));
-          e.printStackTrace();
-          pass = false;
-        } finally {
-          if (session != null) session.close();
+        System.out.printf("url %s%n", data.url);
+        try (HTTPMethod m = HTTPFactory.Get(data.url)) {
+            try {
+                if(data.provider != null)
+                    m.getSession().setCredentialsProvider(data.provider);
+                m.getSession().setUserAgent("tdmRunner");
+                HTTPSession.setGlobalUserAgent("TDM v4.3");
+                int status = m.execute();
+                String s = m.getResponseAsString();
+                System.out.printf("Trigger response = %d == %s%n", status, s);
+                if(status != 200 && status != 404)
+                    pass = false;
+            } catch (HTTPException e) {
+                System.err.println("Fail: " + data.url);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream(10000);
+                e.printStackTrace(new PrintStream(bos));
+                e.printStackTrace();
+                pass = false;
+            }
         }
     }
     if(pass)

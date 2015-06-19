@@ -35,6 +35,7 @@ package thredds.motherlode;
 
 import org.junit.Test;
 import ucar.nc2.util.IO;
+import ucar.unidata.test.util.ThreddsServer;
 
 import java.io.IOException;
 
@@ -45,7 +46,7 @@ import java.io.IOException;
  */
 public class TestMotherlodePing {
 
-  public static String server = "http://thredds-test.ucar.edu/thredds";
+  public static String server = "http://thredds-test.unidata.ucar.edu/thredds";
 
   static void ping(String url) {
     try {
@@ -58,6 +59,7 @@ public class TestMotherlodePing {
 
   @Test
   public void ping() throws Exception {
+    ThreddsServer.TEST.assumeIsAvailable();
     ping("/ncss/nws/metar/ncdecoded/Metar_Station_Data_fc.cdmr/dataset.html");
     ping("/ncss/nws/metar/ncdecoded/Metar_Station_Data_fc.cdmr/dataset.xml");
     ping("/ncss/grib/NCEP/NAM/CONUS_80km/best/dataset.html");

@@ -283,8 +283,11 @@ class DodsV implements Comparable {
     this.elemType = bt;
   }
 
-  public int compareTo(Object o) {
-    return seq - ((DodsV) o).seq;
+  public int compareTo(Object o)
+  {
+    if(o instanceof DodsV)
+        return seq - ((DodsV) o).seq;
+    return -1;
   }
 
   void show( PrintStream out, String space) {
@@ -302,6 +305,11 @@ class DodsV implements Comparable {
     for (DodsV dodsV : children) {
       dodsV.show(out, space + "  ");
     }
+  }
+
+  @Override
+  public String toString() {
+    return bt.getLongName();
   }
 
   //String getName() { return bt == null ? " root" : bt.getEncodedName(); }
@@ -324,8 +332,10 @@ class DodsV implements Comparable {
   DataType getDataType() {
     if (bt == null)
         throw new IllegalStateException("DodsV.bt  == null");
-    if (bt instanceof DGrid) DODSNetcdfFile.convertToNCType( elemType);
-    return DODSNetcdfFile.convertToNCType( bt);
+    if (bt instanceof DGrid)
+        return DODSNetcdfFile.convertToNCType( elemType);
+    else
+        return DODSNetcdfFile.convertToNCType( bt);
   }
 
   int[] getShape() {

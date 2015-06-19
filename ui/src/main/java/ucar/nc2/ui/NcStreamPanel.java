@@ -33,6 +33,7 @@
 package ucar.nc2.ui;
 
 import ucar.nc2.NetcdfFile;
+import ucar.nc2.NetcdfFileSubclass;
 import ucar.nc2.stream.NcStreamIosp;
 import ucar.nc2.ui.widget.BAMutil;
 import ucar.nc2.ui.widget.IndependentWindow;
@@ -60,7 +61,7 @@ public class NcStreamPanel extends JPanel {
   private PreferencesExt prefs;
 
   private BeanTable messTable;
-  private JSplitPane split, split2;
+  private JSplitPane split;
 
   private TextHistoryPane infoTA, infoPopup2, infoPopup3;
   private IndependentWindow infoWindow2, infoWindow3;
@@ -104,17 +105,16 @@ public class NcStreamPanel extends JPanel {
 
     setLayout(new BorderLayout());
 
-    split2 = new JSplitPane(JSplitPane.VERTICAL_SPLIT, false, messTable, infoTA);
-    split2.setDividerLocation(prefs.getInt("splitPos2", 800));
+    split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, false, messTable, infoTA);
+    split.setDividerLocation(prefs.getInt("splitPos", 800));
 
-    add(split2, BorderLayout.CENTER);
+    add(split, BorderLayout.CENTER);
   }
 
   public void save() {
     messTable.saveState(false);
     //prefs.putBeanObject("InfoWindowBounds3", infoWindow3.getBounds());
     if (split != null) prefs.putInt("splitPos", split.getDividerLocation());
-    if (split2 != null) prefs.putInt("splitPos2", split2.getDividerLocation());
   }
 
   public void closeOpenFiles() throws IOException {
@@ -140,11 +140,11 @@ public class NcStreamPanel extends JPanel {
     closeOpenFiles();
 
     java.util.List<MessBean> messages = new ArrayList<MessBean>();
-    ncd = new MyNetcdfFile();
+    ncd = new NetcdfFileSubclass();
     iosp = new NcStreamIosp();
     try {
       raf = new RandomAccessFile(filename, "r");
-      java.util.List<NcStreamIosp.NcsMess> ncm = new ArrayList<NcStreamIosp.NcsMess>();
+      java.util.List<NcStreamIosp.NcsMess> ncm = new ArrayList<>();
       iosp.openDebug(raf, ncd, ncm);
       for (NcStreamIosp.NcsMess m : ncm) {
         messages.add(new MessBean(m));
@@ -156,10 +156,6 @@ public class NcStreamPanel extends JPanel {
 
     messTable.setBeans(messages);
     //System.out.printf("mess = %d%n", messages.size());
-  }
-
-
-  static private class MyNetcdfFile extends NetcdfFile {
   }
 
   public class MessBean {
@@ -188,7 +184,15 @@ public class NcStreamPanel extends JPanel {
       return m.nelems;
     }
 
-    public long getFilePos() {
+    public String getDataType() {
+      return m.dataType == null ? "" : m.dataType.toString();
+    }
+
+    public String getVarname() {
+       return m.varName;
+     }
+
+     public long getFilePos() {
       return m.filePos;
     }
 

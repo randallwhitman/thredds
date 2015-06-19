@@ -116,9 +116,8 @@ double[] result = (double []) a.get1DJavaArray(double.class);</pre>
 
 <p><strong>Q: How do I control the error messages coming out of the library?</strong></p>
 <blockquote>
-  <p>The netCDF-Java library currently uses <a href="http://www.slf4j.org">SLF4J logging</a>. This allows you to switch what logging implementation is used. See
-    the
-    Logging section of <a href="http://www.unidata.ucar.edu/software/netcdf-java/reference/JarDependencies.html">this page</a>.</p>
+  <p>The netCDF-Java library currently uses <a href="http://www.slf4j.org">SLF4J logging</a>. This allows you to switch
+    what logging implementation is used. Read more <a href="BuildDependencies.html#_logging">here</a>.</p>
 </blockquote>
 <p><strong>Q: Im using the log4j logging package. How do I get rid of the message &quot;log4j:WARN No appenders could be found for logger (ucar.nc2.NetcdfFile).
   log4j:WARN Please initialize the log4j system properly&quot; ?</strong></p>
@@ -172,7 +171,7 @@ double[] result = (double []) a.get1DJavaArray(double.class);</pre>
     </li>
     <li>If its a grid dataset,open it in the FeatureTypes/Grid tab to make sure you see grids, to check for complete coordinate system. If you don't see the
       grids you expect, the CoordSys tab might be helpful. It takes some expertise to understand <a href="../CDM/index.html">how Coordinate systems
-        work</a>. When all else fails, follow the <a href="http://cf-pcmdi.llnl.gov/documents/cf-conventions/">CF specification</a>.
+        work</a>. When all else fails, follow the <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/cf-conventions.html">CF specification</a>.
     </li>
     <li>If its an aggregation, the NcML/Aggregation tab will show you the individual file in the aggregation.</li>
     <li>If its an FMRC aggregation, the Fmrc/FmrcImpl tab will show you the various datasets found.</li>
@@ -334,7 +333,7 @@ double[] result = (double []) a.get1DJavaArray(double.class);</pre>
   <ul>
     <li> General Guidelines:<a href="http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html">
       http://www.unidata.ucar.edu/software/netcdf/docs/BestPractices.html</a></li>
-    <li>Recommended Conventions: <a href="http://cf-pcmdi.llnl.gov/">CF Conventions </a></li>
+    <li>Recommended Conventions: <a href="http://cfconventions.org/">CF Conventions </a></li>
   </ul>
 </blockquote>
 <p><strong>Q: How do I put a valid_range attribute on a unsigned variable?</strong></p>

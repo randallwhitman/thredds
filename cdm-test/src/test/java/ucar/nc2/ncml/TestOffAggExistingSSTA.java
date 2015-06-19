@@ -34,24 +34,22 @@
 
 package ucar.nc2.ncml;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import ucar.ma2.Array;
+import ucar.ma2.InvalidRangeException;
+import ucar.nc2.NetcdfFile;
+import ucar.nc2.dataset.NetcdfDataset;
+import ucar.unidata.io.RandomAccessFile;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
+import ucar.unidata.test.util.TestDir;
 
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 
-import ucar.ma2.InvalidRangeException;
-import ucar.ma2.Array;
-import ucar.nc2.NetcdfFile;
-import ucar.nc2.dataset.NetcdfDataset;
-import ucar.unidata.io.RandomAccessFile;
-import ucar.unidata.test.util.TestDir;
-
-public class TestOffAggExistingSSTA extends TestCase {
-
-  public TestOffAggExistingSSTA( String name) {
-    super(name);
-  }
+@Category(NeedsCdmUnitTest.class)
+public class TestOffAggExistingSSTA {
 
   String ncml =
     "<?xml version='1.0' encoding='UTF-8'?>\n" +
@@ -62,6 +60,7 @@ public class TestOffAggExistingSSTA extends TestCase {
     "    </aggregation>\n" +
     "</netcdf>";
 
+  @Test
   public void testSSTA() throws IOException, InvalidRangeException {
     String filename = "file:" + TestDir.cdmUnitTestDir + "ncml/offsite/aggExistingSSTA.xml";
 
@@ -73,9 +72,9 @@ public class TestOffAggExistingSSTA extends TestCase {
     NetcdfDataset.disableNetcdfFileCache();
     NetcdfFile ncfile = NcMLReader.readNcML(new StringReader(ncml), filename, null);
     System.out.println(" TestNcmlAggExisting.open "+ filename);
-    //System.out.println(" "+ncfile);
 
     Array ATssta = ncfile.readSection("ATssta(:,0,0,0)");
+    System.out.printf("array size=%d%n", ATssta.getSize());
 
     int count1 = RandomAccessFile.getOpenFiles().size();
     System.out.println("count files after open="+count1);
@@ -85,6 +84,5 @@ public class TestOffAggExistingSSTA extends TestCase {
     int count2 = RandomAccessFile.getOpenFiles().size();
     System.out.println("count files after close="+count2);
     assert count1 == count2 : "openFile count "+count +"!="+ count2;
-
   }
 }

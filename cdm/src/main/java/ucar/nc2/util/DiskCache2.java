@@ -64,6 +64,8 @@ public class DiskCache2 {
     NestedDirectory,
     NestedTruncate }
 
+  private static org.slf4j.Logger cacheLog = org.slf4j.LoggerFactory.getLogger("cacheLogger");
+
   private CachePathPolicy cachePathPolicy = CachePathPolicy.NestedDirectory;
   private boolean alwaysUseCache = false;
   private boolean neverUseCache = false;
@@ -72,7 +74,6 @@ public class DiskCache2 {
   private String root;
   private int persistMinutes, scourEveryMinutes;
   private Timer timer;
-  private org.slf4j.Logger cacheLog = org.slf4j.LoggerFactory.getLogger("cacheLogger");
   private boolean fail = false;
 
   /**
@@ -111,9 +112,9 @@ public class DiskCache2 {
   /**
    * Create a cache on disk. Use default policy (CachePathPolicy.OneDirectory)
    * @param root the root directory of the cache. Must be writeable.
-   * @param reletiveToHome if the root directory is reletive to the cache home directory.
+   * @param reletiveToHome if the root directory is relative to the cache home directory.
    * @param persistMinutes  a file is deleted if its last modified time is greater than persistMinutes
-   * @param scourEveryMinutes how often to run the scour process. If <= 0, dont scour.
+   * @param scourEveryMinutes how often to run the scour process. If <= 0, don't scour.
    */
   public DiskCache2(String root, boolean reletiveToHome, int persistMinutes, int scourEveryMinutes) {
     this.persistMinutes = persistMinutes;
@@ -212,7 +213,10 @@ public class DiskCache2 {
 
     if (cachePathPolicy == CachePathPolicy.NestedDirectory) {
       File dir = f.getParentFile();
-      boolean ret = dir.mkdirs();
+      if (!dir.exists()) {
+        boolean ret = dir.mkdirs();
+        if (!ret) cacheLog.warn("Error creating dir: " + dir);
+      }
     }
 
     return f;
@@ -275,6 +279,8 @@ public class DiskCache2 {
   public File getExistingFileOrCache(String fileLocation) {
     File f = new File(fileLocation);
     if (f.exists()) return f;
+
+    if (neverUseCache) return null;
 
     File fc = new File(makeCachePath(fileLocation));
     if (fc.exists()) return fc;
@@ -410,7 +416,12 @@ public class DiskCache2 {
       File file = new File(root + cachePath);
       File parent = file.getParentFile();
       if (!parent.exists()) {
+        if (root == null) { // LOOK shouldnt happen, remove soon
+          System.out.printf("mkdir4 %s%n", parent.getPath());
+          new Throwable().printStackTrace();
+        }
         boolean ret = parent.mkdirs();
+        if (!ret) cacheLog.warn("Error creating parent: " + parent);
       }
     }
 
@@ -473,7 +484,7 @@ public class DiskCache2 {
         duration /= 1000 * 60; // minutes
         if (duration > persistMinutes) {
           boolean ret = file.delete();
-          assert ret;
+          // assert ret;
           if (sbuff != null)
             sbuff.append(" deleted ").append(file.getPath()).append(" last= ").append(new Date(file.lastModified())).append("\n");
         }

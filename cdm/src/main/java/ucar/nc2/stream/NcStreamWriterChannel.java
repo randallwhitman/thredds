@@ -36,11 +36,11 @@ package ucar.nc2.stream;
 import ucar.ma2.*;
 import ucar.nc2.*;
 import ucar.nc2.constants.CDM;
-import ucar.nc2.iosp.IospHelper;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
@@ -98,9 +98,10 @@ public class NcStreamWriterChannel {
   public long sendData(Variable v, Section section, WritableByteChannel wbc, boolean deflate) throws IOException, InvalidRangeException {
     if (show) System.out.printf(" %s section=%s%n", v.getFullName(), section);
 
+    ByteOrder bo = ByteOrder.nativeOrder(); // reader makes right
     long size = 0;
     size += writeBytes(wbc, NcStream.MAGIC_DATA); // magic
-    NcStreamProto.Data dataProto = NcStream.encodeDataProto(v, section, deflate, 0);
+    NcStreamProto.Data dataProto = NcStream.encodeDataProto(v, section, deflate, bo, 0);
     byte[] datab = dataProto.toByteArray();
     size += NcStream.writeVInt(wbc, datab.length); // dataProto len
     size += writeBytes(wbc, datab); // dataProto
@@ -115,7 +116,7 @@ public class NcStreamWriterChannel {
         while (iter.hasNext()) {
           size += writeBytes(wbc, NcStream.MAGIC_VDATA); // magic
           ArrayStructureBB abb = StructureDataDeep.copyToArrayBB(iter.next());
-          size += NcStream.encodeArrayStructure(abb, os);
+          size += NcStream.encodeArrayStructure(abb, bo, os);
           count++;
         }
       } finally {
@@ -159,7 +160,6 @@ public class NcStreamWriterChannel {
     if (show) System.out.printf(" data starts at= %d%n", size);
 
     for (Variable v : ncfile.getVariables()) {
-      Attribute chunkAtt = null; // v.findAttribute(CDM.CHUNK);
       Attribute compressAtt = v.findAttribute(CDM.COMPRESS);
       boolean deflate = (compressAtt != null) && compressAtt.isString() && compressAtt.getStringValue().equalsIgnoreCase(CDM.COMPRESS_DEFLATE);
 
@@ -167,9 +167,7 @@ public class NcStreamWriterChannel {
       //if (vsize < sizeToCache) continue; // in the header;
       if (show) System.out.printf(" var %s len=%d starts at= %d%n", v.getFullName(), vsize, size);
 
-      if (chunkAtt != null) {
-        size += copyChunks(wbc, v, compressAtt.getStringValue(), deflate);
-      } else if (vsize > maxChunk) {
+      if (vsize > maxChunk) {
         size += copyChunks(wbc, v, maxChunk, deflate);
       } else {
         size += sendData(v, v.getShapeAsSection(), wbc, deflate);
@@ -200,32 +198,10 @@ public class NcStreamWriterChannel {
     return size;
   }
 
-  private long copyChunks(WritableByteChannel wbc, Variable oldVar, String chunk, boolean deflate) throws IOException {
-    /*long maxChunkElems = maxChunkSize / oldVar.getElementSize();
-  FileWriter.ChunkingIndex index = new FileWriter.ChunkingIndex(oldVar.getShape());
-  long size = 0;
-  while (index.currentElement() < index.getSize()) {
-    try {
-      int[] chunkOrigin = index.getCurrentCounter();
-      int[] chunkShape = index.computeChunkShape(maxChunkElems);
-      size += sendData(oldVar, new Section(chunkOrigin, chunkShape), wbc, deflate);
-      index.setCurrentCounter(index.currentElement() + (int) Index.computeSize(chunkShape));
-
-    } catch (InvalidRangeException e) {
-      e.printStackTrace();
-      throw new IOException(e.getMessage());
-    }
-  }
-  return size; */
-    return 0;
-  }
-
-
   static public void main2(String args[]) throws InvalidRangeException {
     int[] totalShape = new int[]{1, 40, 530, 240};
     int[] chunkShape = new int[]{1, 1, 530, 240};
     FileWriter2.ChunkingIndex index = new FileWriter2.ChunkingIndex(totalShape);
-    long size = 0;
     while (index.currentElement() < index.getSize()) {
       int[] chunkOrigin = index.getCurrentCounter();
       System.out.printf(" %s%n", new Section(chunkOrigin, chunkShape));
@@ -239,7 +215,6 @@ public class NcStreamWriterChannel {
     int[] totalShape = new int[]{1, 40, 530, 240};
     //int[] chunkShape = new int[] {1, 1, 530, 240};
     FileWriter2.ChunkingIndex index = new FileWriter2.ChunkingIndex(totalShape);
-    long size = 0;
     while (index.currentElement() < index.getSize()) {
       int[] chunkOrigin = index.getCurrentCounter();
       int[] chunkShape = index.computeChunkShape(maxChunkElems);

@@ -287,6 +287,11 @@ public class ThreddsMetadata {
     if (p != null) properties.add(p);
   }
 
+  public void addProperties(List<Attribute> atts) {
+    for (Attribute att : atts)
+      if (att.isString()) properties.add(new InvProperty(att.getShortName(), att.getStringValue()));
+  }
+
   /**
    * @return list of properties; may be empty, not null.
    */
@@ -372,6 +377,7 @@ public class ThreddsMetadata {
    * @param cdc set CalendarDateRange to this
    */
   public void setTimeCoverage(CalendarDateRange cdc) {
+    if (cdc == null) return;
     this.timeCoverage = cdc.toDateRange();
   }
 

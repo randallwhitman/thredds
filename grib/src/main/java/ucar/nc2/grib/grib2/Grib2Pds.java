@@ -6,7 +6,6 @@ import ucar.nc2.time.CalendarDate;
 import ucar.unidata.util.Format;
 import ucar.unidata.util.StringUtil2;
 
-import java.io.IOException;
 import java.util.Formatter;
 import java.util.zip.CRC32;
 
@@ -32,9 +31,8 @@ public abstract class Grib2Pds {
    * @param template pds template number
    * @param input   raw bytes
    * @return Grib2Pds or null on error
-   * @throws java.io.IOException on read error
    */
-  static public Grib2Pds factory(int template, byte[] input) throws IOException {
+  static public Grib2Pds factory(int template, byte[] input) {
     switch (template) {
       case 0:
         return new Grib2Pds0(input);
@@ -71,16 +69,15 @@ public abstract class Grib2Pds {
   }
 
   /////////////////////////////////////////////////
-  protected byte[] input;
+  protected final byte[] input;
   protected final int template; // product definition template
 
   /**
    * Constructs a Grib2PDSVariables object from a byte[].
    *
-   * @param input   PDS
-   * @throws java.io.IOException if raf contains no valid GRIB file
+   * @param input   raw bytes
    */
-  protected Grib2Pds(byte[] input) throws IOException {
+  protected Grib2Pds(byte[] input) {
     this.input = input;
     template = GribNumbers.int2(getOctet(8), getOctet(9));
   }
@@ -364,7 +361,7 @@ public abstract class Grib2Pds {
    */
   static private class Grib2Pds0 extends Grib2Pds {
 
-    Grib2Pds0(byte[] input) throws IOException {
+    Grib2Pds0(byte[] input) {
       super(input);
     }
 
@@ -475,7 +472,7 @@ public abstract class Grib2Pds {
    * values over a spatial area at a horizontal level or in a horizontal layer at a point in time
    */
   static private class Grib2Pds15 extends Grib2Pds0 {
-    Grib2Pds15(byte[] input) throws IOException {
+    Grib2Pds15(byte[] input) {
       super(input);
     }
 
@@ -503,7 +500,7 @@ public abstract class Grib2Pds {
    * individual ensemble forecast, control and perturbed, at a horizontal level or in a horizontal layer at a point in time
    */
   static private class Grib2Pds1 extends Grib2Pds0 implements PdsEnsemble {
-    Grib2Pds1(byte[] input) throws IOException {
+    Grib2Pds1(byte[] input) {
       super(input);
     }
 
@@ -554,7 +551,7 @@ public abstract class Grib2Pds {
    */
   static private class Grib2Pds11 extends Grib2Pds1 implements PdsInterval {
 
-    Grib2Pds11(byte[] input) throws IOException {
+    Grib2Pds11(byte[] input) {
       super(input);
     }
 
@@ -589,10 +586,6 @@ public abstract class Grib2Pds {
       return readTimeIntervals(getNumberTimeRanges(), 50);
     }
 
-    public int getStatisticalProcessType() {
-      return super.getStatisticalProcessType();
-    }
-
     @Override
     public int templateLength() {
       return 49 + getNumberTimeRanges() * 12;
@@ -621,7 +614,7 @@ public abstract class Grib2Pds {
    */
   static private class Grib2Pds2 extends Grib2Pds0 implements PdsEnsembleDerived {
 
-    Grib2Pds2(byte[] input) throws IOException {
+    Grib2Pds2(byte[] input) {
       super(input);
     }
 
@@ -665,7 +658,7 @@ public abstract class Grib2Pds {
     //CalendarDate endInterval; // Date msecs
     //int ft;
 
-    Grib2Pds12(byte[] input) throws IOException {
+    Grib2Pds12(byte[] input) {
       super(input);
       //endInterval = calcTime(37);
       //ft = makeForecastTime(endInterval, getTimeUnit());
@@ -702,10 +695,6 @@ public abstract class Grib2Pds {
       return readTimeIntervals(getNumberTimeRanges(), 49);
     }
 
-    public int getStatisticalProcessType() {
-      return super.getStatisticalProcessType();
-    }
-
     @Override
     public int templateLength() {
       return 48 + getNumberTimeRanges() * 12;
@@ -729,12 +718,35 @@ public abstract class Grib2Pds {
   //////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Product definition template 4.5 -
-   * probability forecasts at a horizontal level or in a horizontal layer at a point in time
+   * Product definition template 4.5 – probability forecasts at a horizontal level or in a horizontal layer at a point in time
+   Octet No. Contents
+   10 Parameter category (see Code table 4.1)
+   11 Parameter number (see Code table 4.2)
+   12 Type of generating process (see Code table 4.3)
+   13 Background generating process identifier (defined by originating centre)
+   14 Forecast generating process identifier (defined by originating centre)
+   15–16 Hours after reference time of data cut-off (see Note)
+   17 Minutes after reference time of data cut-off
+   18 Indicator of unit of time range (see Code table 4.4)
+   19–22 Forecast time in units defined by octet 18
+   23 Type of first fixed surface (see Code table 4.5)
+   24 Scale factor of first fixed surface
+   25–28 Scaled value of first fixed surface
+   29 Type of second fixed surface (see Code table 4.5)
+   30 Scale factor of second fixed surface
+   31–34 Scaled value of second fixed surface
+   35 Forecast probability number
+   36 Total number of forecast probabilities
+   37 Probability type (see Code table 4.9)
+   38 Scale factor of lower limit
+   39–42 Scaled value of lower limit
+   43 Scale factor of upper limit
+   44–47 Scaled value of upper limit
+   Note: Hours greater than 65534 will be coded as 65534
    */
   static private class Grib2Pds5 extends Grib2Pds0 implements PdsProbability {
 
-    Grib2Pds5(byte[] input) throws IOException {
+    Grib2Pds5(byte[] input) {
       super(input);
     }
 
@@ -875,14 +887,64 @@ public abstract class Grib2Pds {
   //////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Product definition template 4.9 -
-   * probability forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous time interval
+   * Product definition template 4.9 – probability forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous time interval
+   Octet No. Contents
+   10 Parameter category (see Code table 4.1)
+   11 Parameter number (see Code table 4.2)
+   12 Type of generating process (see Code table 4.3)
+   13 Background generating process identifier (defined by originating centre)
+   14 Forecast generating process identifier (defined by originating centre)
+   15–16 Hours after reference time of data cut-off (see Note 1)
+   17 Minutes after reference time of data cut-off
+   18 Indicator of unit of time range (see Code table 4.4)
+   19–22 Forecast time in units defined by octet 18 (see Note 2)
+   23 Type of first fixed surface (see Code table 4.5)
+   24 Scale factor of first fixed surface
+   25–28 Scaled value of first fixed surface
+   29 Type of second fixed surface (see Code table 4.5)
+   30 Scale factor of second fixed surface
+   31–34 Scaled value of second fixed surface
+   35 Forecast probability number
+   36 Total number of forecast probabilities
+   37 Probability type (see Code table 4.9)
+   38 Scale factor of lower limit
+   39–42 Scaled value of lower limit
+   43 Scale factor of upper limit
+   44–47 Scaled value of upper limit
+   48–49 Year of end of overall time interval
+   50 Month of end of overall time interval
+   51 Day of end of overall time interval
+   52 Hour of end of overall time interval
+   53 Minute of end of overall time interval
+   54 Second of end of overall time interval
+   55 n – number of time range specifications describing the time intervals used to calculate the statistically processed field
+   56–59 Total number of data values missing in the statistical process
+   60–71 Specification of the outermost (or only) time range over which statistical processing is done
+   60 Statistical process used to calculate the processed field from the field at each time increment during the time range (see Code table 4.10)
+   61 Type of time increment between successive fields used in the statistical processing (see Code table 4.11)
+   62 Indicator of unit of time for time range over which statistical processing is done (see Code table 4.4)
+   63–66 Length of the time range over which statistical processing is done, in units defined by the previous octet
+   67 Indicator of unit of time for the increment between the successive fields used (see Code table 4.4)
+   68–71 Time increment between successive fields, in units defined by the previous octet (see Note 3)
+   72–nn These octets are included only if n > 1, where nn = 59 + 12 x n
+   72–83 As octets 60 to 71, next innermost step of processing
+   84–nn Additional time range specifications, included in accordance with the value of n. Contents
+   as octets 60 to 71, repeated as necessary.
+   Notes:
+   (1) Hours greater than 65534 will be coded as 65534.
+   (2) The reference time in section 1 and the forecast time together define the beginning of the overall time interval.
+   (3) An increment of zero means that the statistical processing is the result of a continuous (or near continuous) process, not
+   the processing of a number of discrete samples. Examples of such continuous processes are the temperatures measured
+   by analogue maximum and minimum thermometers or thermographs, and the rainfall measured by a raingauge.
+   The reference and forecast times are successively set to their initial values plus or minus the increment, as defined by
+   the type of time increment (one of octets 46, 58, 70, ...). For all but the innermost (last) time range, the next inner range is
+   then processed using these reference and forecast times as the initial reference and forecast times.
    */
   static private class Grib2Pds9 extends Grib2Pds5 implements PdsInterval {
     // CalendarDate endInterval; // Date msecs
     //int ft;
 
-    Grib2Pds9(byte[] input) throws IOException {
+    Grib2Pds9(byte[] input) {
       super(input);
       //endInterval = calcTime(48);
       //ft = makeForecastTime(endInterval, getTimeUnit());
@@ -924,10 +986,6 @@ public abstract class Grib2Pds {
       return readTimeIntervals(getNumberTimeRanges(), 60);
     }
 
-    public int getStatisticalProcessType() {
-      return super.getStatisticalProcessType();
-    }
-
     @Override
     public int templateLength() {
       return 59 + getNumberTimeRanges() * 12;
@@ -959,7 +1017,7 @@ public abstract class Grib2Pds {
   static private class Grib2Pds8 extends Grib2Pds0 implements PdsInterval {
     // CalendarDate endInterval; // Date msecs
 
-    Grib2Pds8(byte[] input) throws IOException {
+    Grib2Pds8(byte[] input) {
       super(input);
       //endInterval = calcTime(35);
     }
@@ -999,10 +1057,6 @@ public abstract class Grib2Pds {
       return readTimeIntervals(getNumberTimeRanges(), 47);
     }
 
-    public int getStatisticalProcessType() {
-      return super.getStatisticalProcessType();
-    }
-
     @Override
     public int templateLength() {
       return 46 + getNumberTimeRanges() * 12;
@@ -1036,7 +1090,7 @@ public abstract class Grib2Pds {
    */
   static private class Grib2Pds6 extends Grib2Pds0 implements PdsPercentile {
 
-    Grib2Pds6(byte[] input) throws IOException {
+    Grib2Pds6(byte[] input) {
       super(input);
     }
 
@@ -1068,7 +1122,7 @@ public abstract class Grib2Pds {
   static private class Grib2Pds10 extends Grib2Pds6 implements PdsInterval {
     // CalendarDate endInterval;
 
-    Grib2Pds10(byte[] input) throws IOException {
+    Grib2Pds10(byte[] input) {
       super(input);
       //endInterval = calcTime(36);
     }
@@ -1104,10 +1158,6 @@ public abstract class Grib2Pds {
       return readTimeIntervals(getNumberTimeRanges(), 48);
     }
 
-    public int getStatisticalProcessType() {
-      return super.getStatisticalProcessType();
-    }
-
     @Override
     public int templateLength() {
       return 48 + getNumberTimeRanges() * 12;
@@ -1131,7 +1181,7 @@ public abstract class Grib2Pds {
    */
   static private class Grib2Pds30 extends Grib2Pds {
 
-    Grib2Pds30(byte[] input) throws IOException {
+    Grib2Pds30(byte[] input) {
       super(input);
       log.debug("Product Definition Template 4.30 is deprecated in favor of 4.31 (WMO Manual on Codes");
     }
@@ -1210,7 +1260,7 @@ public abstract class Grib2Pds {
 
         static int octetsPerBand = 11;
 
-        Grib2Pds31(byte[] input) throws IOException {
+        Grib2Pds31(byte[] input) {
             super(input);
         }
 
@@ -1259,7 +1309,7 @@ public abstract class Grib2Pds {
                 sb.series = GribNumbers.int2(getOctet(pos + 2), getOctet(pos + 3));
                 sb.instrumentType = GribNumbers.int2(getOctet(pos + 4), getOctet(pos + 5));
                 int scaleFactor = getOctetSigned(pos + 6);
-                int svalue = GribNumbers.int4(getOctet(pos + 7), getOctet(pos + 8), getOctet(pos + 9), getOctet(pos + 10));
+                int svalue = GribNumbers.int4(getOctet(pos + 7), getOctet(pos + 8), getOctet(pos + 9), getOctet(pos +  10));
                 sb.value = applyScaleFactor(scaleFactor, svalue);
                 pos += octetsPerBand;
                 result[i] = sb;
@@ -1307,7 +1357,7 @@ public abstract class Grib2Pds {
 
   static private class Grib2Pds48 extends Grib2Pds implements PdsAerosol {
 
-    Grib2Pds48(byte[] input) throws IOException {
+    Grib2Pds48(byte[] input) {
       super(input);
     }
 
@@ -1447,6 +1497,12 @@ public abstract class Grib2Pds {
      // LOOK: is this cruft or official ?
      if ((year == 0) && (month == 0) && (day == 0) && (hour == 0) && (minute == 0) && (second == 0))
        return null;
+
+   // href.t00z.prob.f36.grib2
+     if (hour > 23) {
+       day += (hour/24);
+       hour = hour % 24;
+     }
 
     return CalendarDate.of(null, year, month, day, hour, minute, second);
   }

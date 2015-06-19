@@ -42,9 +42,8 @@ import ucar.nc2.Variable;
 import ucar.nc2.VariableSimpleIF;
 import ucar.nc2.Dimension;
 import ucar.nc2.Attribute;
-import ucar.nc2.units.DateUnit;
-import ucar.nc2.util.cache.FileCache;
 import ucar.nc2.constants.FeatureType;
+import ucar.nc2.util.cache.FileCacheIF;
 import ucar.unidata.geoloc.LatLonRect;
 import ucar.ma2.DataType;
 
@@ -62,6 +61,7 @@ public abstract class RadialDatasetSweepAdapter extends TypedDatasetImpl impleme
   protected HashMap csHash = new HashMap();
   protected ucar.nc2.units.DateUnit dateUnits;
   protected ucar.nc2.time.CalendarDateUnit calDateUnits;
+  protected FileCacheIF fileCache;
 
   public RadialDatasetSweepAdapter() {}
   
@@ -234,14 +234,24 @@ public abstract class RadialDatasetSweepAdapter extends TypedDatasetImpl impleme
   @Override
   public synchronized void close() throws java.io.IOException {
     if (fileCache != null) {
-      fileCache.release(this);
-    } else {
-      try {
-        if (ncfile != null) ncfile.close();
-      } finally {
-        ncfile = null;
-      }
+      if (fileCache.release(this)) return;
     }
+
+    try {
+      if (netcdfDataset != null) netcdfDataset.close();
+    } finally {
+      netcdfDataset = null;
+    }
+  }
+
+      // release any resources like file handles
+  public void release() throws IOException {
+    if (netcdfDataset != null) netcdfDataset.release();
+  }
+
+  // reacquire any resources like file handles
+  public void reacquire() throws IOException {
+    if (netcdfDataset != null) netcdfDataset.reacquire();
   }
 
   /* @Override
@@ -251,13 +261,11 @@ public abstract class RadialDatasetSweepAdapter extends TypedDatasetImpl impleme
 
   @Override
   public long getLastModified() {
-    return (ncfile != null) ? ncfile.getLastModified() : 0;
+    return (netcdfDataset != null) ? netcdfDataset.getLastModified() : 0;
   }
 
-  protected FileCache fileCache;
-
   @Override
-  public void setFileCache(FileCache fileCache) {
+  public synchronized void setFileCache(FileCacheIF fileCache) {
     this.fileCache = fileCache;
   }
 

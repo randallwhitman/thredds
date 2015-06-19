@@ -222,7 +222,7 @@ class H5tiledLayoutBB implements LayoutBB {
       return uncomp;
     }
 
-    // just strip off the 4-byte fletcher32 checksum at the end
+     // just strip off the 4-byte fletcher32 checksum at the end
     private byte[] checkfletcher32(byte[] org) throws IOException {
       byte[] result = new byte[org.length-4];
       System.arraycopy(org, 0, result, 0, result.length);

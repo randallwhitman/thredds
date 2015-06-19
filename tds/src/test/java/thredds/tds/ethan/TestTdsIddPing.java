@@ -32,9 +32,9 @@
  */
 package thredds.tds.ethan;
 
-import junit.framework.*;
-
-import thredds.catalog.*;
+import junit.framework.TestCase;
+import thredds.client.catalog.Catalog;
+import ucar.unidata.test.util.ThreddsServer;
 
 /**
  * _more_
@@ -53,10 +53,11 @@ public class TestTdsIddPing extends TestCase
     super( name );
   }
 
+  @Override
   protected void setUp()
   {
+    ThreddsServer.LIVE.assumeIsAvailable();
     host = System.getProperty( "thredds.tds.test.server", host );
-
     targetTdsUrl = "http://" + host + "/thredds/";
   }
 
@@ -66,7 +67,7 @@ public class TestTdsIddPing extends TestCase
     System.out.println( "validate catalog: " + catUrl );
 
     StringBuilder msg = new StringBuilder();
-    InvCatalogImpl catalog = TestAll.openAndValidateCatalog( catUrl, msg, false );
+    Catalog catalog = TestAll.openAndValidateCatalog( catUrl, msg, false );
     if ( catalog == null )
     {
       fail( msg.toString());
@@ -79,7 +80,7 @@ public class TestTdsIddPing extends TestCase
     System.out.println( "validate catalog: " + catUrl );
 
     StringBuilder msg = new StringBuilder();
-    InvCatalogImpl catalog = TestAll.openAndValidateCatalog( catUrl, msg, false );
+    Catalog catalog = TestAll.openAndValidateCatalog( catUrl, msg, false );
     if ( catalog == null )
     {
       fail( msg.toString() );

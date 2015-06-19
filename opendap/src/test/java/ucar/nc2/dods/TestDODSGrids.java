@@ -37,7 +37,7 @@ import ucar.nc2.*;
 
 import java.io.*;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 /** Test nc2 dods in the JUnit framework. */
 
@@ -57,7 +57,7 @@ public class TestDODSGrids {
     checkVariable(v);
 
     assert(null != (v = dodsfile.findVariable("FourD")));
-    assert v instanceof DODSGrid;;
+    assert v instanceof DODSGrid;
     checkVariable2(v);
   }
 

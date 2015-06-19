@@ -1,10 +1,9 @@
-jar {
-    manifest {
-        attributes 'Implementation-Title': 'netcdf4'
-    }
-}
+description = "An IOSP for NetCDF-4 that loads the C library to read and write files."
+ext.title = "NetCDF-4 IOSP"
+ext.url = "https://www.unidata.ucar.edu/software/netcdf/"
 
 dependencies {
-  compile project(':cdm')
-  compile 'net.java.dev.jna:jna:4.0.0'
+    compile project(':cdm')
+    compile libraries["jna"]
+    compile libraries["slf4j-api"]
 }

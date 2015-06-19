@@ -94,15 +94,25 @@ public class AWIPSsatConvention extends CoordSysBuilder {
     Dimension dimy = ds.findDimension("y");
     int ny = dimy.getLength();
 
+
     String projName = ds.findAttValueIgnoreCase(null, "projName", "none");
-    if (projName.equalsIgnoreCase("LAMBERT_CONFORMAL"))
-      projCT = makeLCProjection(ds, projName, nx, ny);
+    if (projName.equalsIgnoreCase("CYLINDRICAL_EQUIDISTANT")) {
+      makeLatLonProjection(ds, projName, nx, ny);
 
-    if (projName.equalsIgnoreCase("MERCATOR"))
-      projCT = makeMercatorProjection(ds, projName, nx, ny);
+      ds.addCoordinateAxis(makeLonCoordAxis(ds, nx, "x"));
+      ds.addCoordinateAxis(makeLatCoordAxis(ds, ny, "y"));
 
-    ds.addCoordinateAxis( makeXCoordAxis( ds, nx, "x"));
-    ds.addCoordinateAxis( makeYCoordAxis( ds, ny, "y"));
+    } else {
+
+      if (projName.equalsIgnoreCase("LAMBERT_CONFORMAL"))
+        projCT = makeLCProjection(ds, projName, nx, ny);
+
+      if (projName.equalsIgnoreCase("MERCATOR"))
+        projCT = makeMercatorProjection(ds, projName, nx, ny);
+
+      ds.addCoordinateAxis(makeXCoordAxis(ds, nx, "x"));
+      ds.addCoordinateAxis(makeYCoordAxis(ds, ny, "y"));
+    }
 
     // long_name; LOOK: not sure of units
     Variable datav = ds.findVariable("image");
@@ -114,7 +124,7 @@ public class AWIPSsatConvention extends CoordSysBuilder {
     ArrayByte.D1 missing_values = new ArrayByte.D1(2);
     missing_values.set(0, (byte) 0);
     missing_values.set(1, (byte) -127);
-    datav.addAttribute( new Attribute("missing_values", missing_values));
+    datav.addAttribute( new Attribute(CDM.MISSING_VALUE, missing_values));
     datav.setUnsigned(true);
 
     if (projCT != null) {
@@ -133,6 +143,14 @@ public class AWIPSsatConvention extends CoordSysBuilder {
   protected AxisType getAxisType( NetcdfDataset ds, VariableEnhanced ve) {
     Variable v = (Variable) ve;
     String vname = v.getShortName();
+    String units = v.getUnitsString();
+
+    if (units.equalsIgnoreCase(CDM.LON_UNITS))
+       return AxisType.Lon;
+
+    if (units.equalsIgnoreCase(CDM.LAT_UNITS))
+       return AxisType.Lat;
+
 
    if (vname.equalsIgnoreCase("x"))
       return AxisType.GeoX;
@@ -173,6 +191,19 @@ public class AWIPSsatConvention extends CoordSysBuilder {
     super.makeCoordinateTransforms( ds);
   }
 
+  private void makeLatLonProjection(NetcdfDataset ds, String name, int nx, int ny) throws NoSuchElementException {
+    double lat0 = findAttributeDouble( ds, "lat00");
+    double lon0 = findAttributeDouble(ds, "lon00");
+    double latEnd = findAttributeDouble(ds, "latNxNy");
+    double lonEnd = findAttributeDouble(ds, "lonNxNy");
+    if (lonEnd < lon0) lonEnd += 360;
+
+    startx = lon0;
+    starty = lat0;
+    dx = (lonEnd - lon0) / nx;
+    dy = (latEnd - lat0) / ny;
+  }
+
   private ProjectionCT makeLCProjection(NetcdfDataset ds, String name, int nx, int ny) throws NoSuchElementException {
     double centralLat = findAttributeDouble( ds, "centralLat");
     double centralLon = findAttributeDouble( ds, "centralLon");
@@ -208,10 +239,10 @@ public class AWIPSsatConvention extends CoordSysBuilder {
   }
 
  private ProjectionCT makeMercatorProjection(NetcdfDataset ds, String name, int nx, int ny) throws NoSuchElementException {
-    double centralLat = findAttributeDouble( ds, "centralLat");
+    // double centralLat = findAttributeDouble( ds, "centralLat");
     // Center longitude for the mercator projection, where the mercator projection is parallel to the Earth's surface.
     // from this, i guess is actually transverse mercator
-    double centralLon = findAttributeDouble( ds, "centralLon");
+    // double centralLon = findAttributeDouble( ds, "centralLon");
     // lat0, central meridian, scale factor
     // TransverseMercator proj = new TransverseMercator(centralLat, centralLon, 1.0);
 
@@ -270,6 +301,27 @@ public class AWIPSsatConvention extends CoordSysBuilder {
 
     if (debugProj)
       parseInfo.format("  makeYCoordAxis ending y %f ny= %d dy= %f%n",starty + ny * dy, ny, dy);
+    return v;
+  }
+
+  private CoordinateAxis makeLonCoordAxis(NetcdfDataset ds, int nx, String xname) {
+    CoordinateAxis v = new CoordinateAxis1D(ds, null, xname, DataType.DOUBLE, xname, CDM.LON_UNITS, "longitude");
+    v.setValues(nx, startx, dx);
+
+    parseInfo.format("Created X Coordinate Axis = ");
+    v.getNameAndDimensions(parseInfo, true, false);
+    parseInfo.format("%n");
+    return v;
+  }
+
+  private CoordinateAxis makeLatCoordAxis( NetcdfDataset ds, int ny, String yname) {
+    CoordinateAxis v = new CoordinateAxis1D( ds, null, yname, DataType.DOUBLE, yname, CDM.LAT_UNITS, "latitude");
+    v.setValues(ny, starty, dy);
+
+    parseInfo.format("Created Lat Coordinate Axis = ");
+    v.getNameAndDimensions(parseInfo, true, false);
+    parseInfo.format("%n");
+
     return v;
   }
 

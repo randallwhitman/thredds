@@ -32,18 +32,21 @@
  */
 package ucar.nc2.iosp.grib;
 
-import java.io.*;
-
-import org.junit.*;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.dataset.NetcdfDataset;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 
-/** Test reading grib files */
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
 
+/** Test reading grib files */
+@Category(NeedsCdmUnitTest.class)
 public class TestJustReadGrib  {
   private boolean show = false;
-
 
   @Test
   public void readGrib1Files() throws Exception {
@@ -56,12 +59,12 @@ public class TestJustReadGrib  {
   }
 
   @Test
-  public void readMotherloadNcepFiles() throws Exception {
+  public void readNcepFiles() throws Exception {
     readAllDir( TestDir.cdmUnitTestDir + "tds/ncep", null, true);
   }
 
   @Test
-  public void readMotherloadFnmocFiles() throws Exception {
+  public void readFnmocFiles() throws Exception {
     readAllDir( TestDir.cdmUnitTestDir + "tds/fnmoc", null, true);
   }
 
@@ -69,9 +72,9 @@ public class TestJustReadGrib  {
     TestDir.actOnAll(dirName, new GribFilter(), new GribAct(), recurse);
   }
 
-  //@Test
+  @Test
   public void testProblem() throws IOException {
-    String filename = "Q:\\cdmUnitTest\\tds\\fnmoc\\NAVGEM/FNMOC_NAVGEM_Global_0p5deg_20130805_0000.grib1";
+    String filename = TestDir.cdmUnitTestDir + "formats/grib1/testproj2.grb";
     System.out.println("read file= "+filename);
     NetcdfFile ncfile = NetcdfDataset.openFile( filename, null);
     ncfile.close();
@@ -88,6 +91,7 @@ public class TestJustReadGrib  {
       if (path.endsWith(".gbx9")) return false;
       if (path.endsWith(".ncx")) return false;
       if (path.endsWith(".ncx2")) return false;
+      if (path.endsWith(".ncx3")) return false;
       try {
         System.out.printf("opening %s%n", file.getCanonicalPath());
       } catch (IOException e) {
@@ -102,9 +106,9 @@ public class TestJustReadGrib  {
     @Override
     public int doAct(String filename) throws IOException {
       System.out.println("read file= "+filename);
-      NetcdfFile ncfile = NetcdfDataset.openFile( filename, null);
-      ncfile.close();
-      return 1;
+      try (NetcdfFile ncfile = NetcdfDataset.openFile( filename, null)) {
+        return 1;
+      }
     }
   }
 }

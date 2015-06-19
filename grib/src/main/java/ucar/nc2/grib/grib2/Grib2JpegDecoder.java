@@ -32,22 +32,22 @@
  */
 package ucar.nc2.grib.grib2;
 
-import jj2000.j2k.quantization.dequantizer.*;
-import jj2000.j2k.image.invcomptransf.*;
-import jj2000.j2k.fileformat.reader.*;
-import jj2000.j2k.codestream.reader.*;
-import jj2000.j2k.wavelet.synthesis.*;
-import jj2000.j2k.entropy.decoder.*;
-import jj2000.j2k.decoder.*;
-import jj2000.j2k.image.output.*;
-import jj2000.j2k.codestream.*;
-import jj2000.j2k.image.*;
-import jj2000.j2k.util.*;
-import jj2000.j2k.roi.*;
-import jj2000.j2k.io.*;
+import ucar.jpeg.jj2000.j2k.quantization.dequantizer.*;
+import ucar.jpeg.jj2000.j2k.image.invcomptransf.*;
+import ucar.jpeg.jj2000.j2k.fileformat.reader.*;
+import ucar.jpeg.jj2000.j2k.codestream.reader.*;
+import ucar.jpeg.jj2000.j2k.wavelet.synthesis.*;
+import ucar.jpeg.jj2000.j2k.entropy.decoder.*;
+import ucar.jpeg.jj2000.j2k.decoder.*;
+import ucar.jpeg.jj2000.j2k.image.output.*;
+import ucar.jpeg.jj2000.j2k.codestream.*;
+import ucar.jpeg.jj2000.j2k.image.*;
+import ucar.jpeg.jj2000.j2k.util.*;
+import ucar.jpeg.jj2000.j2k.roi.*;
+import ucar.jpeg.jj2000.j2k.io.*;
 
-import colorspace.*;
-import icc.*;
+import ucar.jpeg.colorspace.*;
+import ucar.jpeg.icc.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,7 +162,7 @@ public class Grib2JpegDecoder {
    */
   public void decode(byte buf[]) throws IOException {
     // int dataSize = buf.length;
-    boolean verbose = false;
+    final boolean verbose = false;
     int res; // resolution level to reconstruct
     FileFormatReader ff;
     HeaderDecoder hd;
@@ -215,7 +215,6 @@ public class Grib2JpegDecoder {
       }
 
       int nCompCod = hd.getNumComps();
-      int nTiles = hi.siz.getNumTiles();
       decSpec = hd.getDecoderSpecs();
 
       // Get demixed bitdepths
@@ -231,9 +230,7 @@ public class Grib2JpegDecoder {
       try {
         entdec = hd.createEntropyDecoder(breader, pl);
       } catch (IllegalArgumentException e) {
-        error("Cannot instantiate entropy decoder" +
-                ((e.getMessage() != null) ?
-                        (":\n" + e.getMessage()) : ""), 2, e);
+        error("Cannot instantiate entropy decoder" + ((e.getMessage() != null) ? (":\n" + e.getMessage()) : ""), 2, e);
         return;
       }
 
@@ -241,9 +238,7 @@ public class Grib2JpegDecoder {
       try {
         roids = hd.createROIDeScaler(entdec, pl, decSpec);
       } catch (IllegalArgumentException e) {
-        error("Cannot instantiate roi de-scaler." +
-                ((e.getMessage() != null) ?
-                        (":\n" + e.getMessage()) : ""), 2, e);
+        error("Cannot instantiate roi de-scaler." + ((e.getMessage() != null) ? (":\n" + e.getMessage()) : ""), 2, e);
         return;
       }
 
@@ -251,9 +246,7 @@ public class Grib2JpegDecoder {
       try {
         deq = hd.createDequantizer(roids, depth, decSpec);
       } catch (IllegalArgumentException e) {
-        error("Cannot instantiate dequantizer" +
-                ((e.getMessage() != null) ?
-                        (":\n" + e.getMessage()) : ""), 2, e);
+        error("Cannot instantiate dequantizer" + ((e.getMessage() != null) ? (":\n" + e.getMessage()) : ""), 2, e);
         return;
       }
 
@@ -281,22 +274,16 @@ public class Grib2JpegDecoder {
       if (ff.JP2FFUsed && pl.getParameter("nocolorspace").equals("off")) {
         try {
           csMap = new ColorSpace(in, hd, pl);
-          channels = hd.
-                  createChannelDefinitionMapper(ictransf, csMap);
+          channels = hd.createChannelDefinitionMapper(ictransf, csMap);
           resampled = hd.createResampler(channels, csMap);
-          palettized = hd.
-                  createPalettizedColorSpaceMapper(resampled, csMap);
+          palettized = hd.createPalettizedColorSpaceMapper(resampled, csMap);
           color = hd.createColorSpaceMapper(palettized, csMap);
 
         } catch (IllegalArgumentException e) {
-          error("Could not instantiate ICC profiler" +
-                  ((e.getMessage() != null) ?
-                          (":\n" + e.getMessage()) : ""), 1, e);
+          error("Could not instantiate ICC profiler" + ((e.getMessage() != null) ? (":\n" + e.getMessage()) : ""), 1, e);
           return;
         } catch (ColorSpaceException e) {
-          error("error processing jp2 colorspace information" +
-                  ((e.getMessage() != null) ?
-                          (": " + e.getMessage()) : "    "), 1, e);
+          error("error processing jp2 colorspace information" + ((e.getMessage() != null) ? (": " + e.getMessage()) : "    "), 1, e);
           return;
         }
       } else { // Skip colorspace mapping
@@ -388,11 +375,12 @@ public class Grib2JpegDecoder {
       } else {
         error("An uncaught runtime exception has occurred.", 2);
       }
-      if (debug) e.printStackTrace();
+      throw new IOException(e);
 
     } catch (Throwable e) {
-      error("An uncaught exception has occurred.", 2);
-      if (debug) e.printStackTrace();
+      throw new IOException(e);
+      //error("An uncaught exception has occurred.", 2);
+      //if (debug) e.printStackTrace();
     }
   } // end decode
 
@@ -454,7 +442,7 @@ public class Grib2JpegDecoder {
     str = ICCProfiler.getParameterInfo();
     if (str != null) for (i = str.length - 1; i >= 0; i--) vec.add(str[i]);
 
-    str = jj2000.j2k.decoder.Decoder.getParameterInfo();
+    str = ucar.jpeg.jj2000.j2k.decoder.Decoder.getParameterInfo();
     if (str != null) for (i = str.length - 1; i >= 0; i--) vec.add(str[i]);
 
     String[][] result = new String[vec.size()][];

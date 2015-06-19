@@ -2,21 +2,20 @@ package ucar.nc2.jni.netcdf;
 
 import org.apache.commons.io.filefilter.NotFileFilter;
 import org.apache.commons.io.filefilter.SuffixFileFilter;
-
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import ucar.ma2.DataType;
-import ucar.nc2.Attribute;
-import ucar.nc2.NetcdfFile;
-import ucar.nc2.NetcdfFileWriter;
-import ucar.nc2.Variable;
+import ucar.nc2.*;
 import ucar.nc2.constants.CDM;
 import ucar.nc2.iosp.netcdf4.Nc4;
 import ucar.nc2.util.CompareNetcdf2;
 import ucar.unidata.io.RandomAccessFile;
+import ucar.unidata.test.util.NeedsCdmUnitTest;
 import ucar.unidata.test.util.TestDir;
 
 import java.io.File;
@@ -33,16 +32,18 @@ import java.util.List;
  * @since 10/22/13
  */
 @RunWith(Parameterized.class)
+@Category(NeedsCdmUnitTest.class)
 public class TestNc4JniReadCompare {
 
   @Before
   public void setLibrary() {
-    Nc4Iosp.setLibraryAndPath("/opt/netcdf/lib", "netcdf");
-    //Nc4Iosp.setLibraryAndPath("C:/cdev/lib", "netcdf");
-    System.out.printf("Nc4Iosp.isClibraryPresent = %s%n", Nc4Iosp.isClibraryPresent());
+    // Ignore this class's tests if NetCDF-4 isn't present.
+    // We're using @Before because it shows these tests as being ignored.
+    // @BeforeClass shows them as *non-existent*, which is not what we want.
+    Assume.assumeTrue("NetCDF-4 C library not present.", Nc4Iosp.isClibraryPresent());
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static List<Object[]> getTestParameters() {
 
     List<Object[]> result = new ArrayList<Object[]>(500);
@@ -103,7 +104,7 @@ public class TestNc4JniReadCompare {
 
       Formatter f = new Formatter();
       CompareNetcdf2 mind = new CompareNetcdf2(f, false, false, false);
-      boolean ok = mind.compare(ncfile, jni, new Netcdf4ObjectFilter(), false, false, false);
+      boolean ok = mind.compare(ncfile, jni, new CompareNetcdf2.Netcdf4ObjectFilter(), false, false, false);
       if (!ok) {
         fail++;
         System.out.printf("--Compare %s%n", filename);
@@ -121,49 +122,12 @@ public class TestNc4JniReadCompare {
 
   private NetcdfFile openJni(String location) throws IOException {
     Nc4Iosp iosp = new Nc4Iosp(NetcdfFileWriter.Version.netcdf4);
-    NetcdfFile ncfile = new MyNetcdfFile(iosp, location);
+    NetcdfFile ncfile = new NetcdfFileSubclass(iosp, location);
     RandomAccessFile raf = new RandomAccessFile(location, "r");
     iosp.open(raf, ncfile, null);
     return ncfile;
   }
 
-  private class MyNetcdfFile extends NetcdfFile {
-    private MyNetcdfFile(Nc4Iosp iosp, String location) {
-      super();
-      spi = iosp;
-      this.location = location;
-    }
-  }
-
-  public static class Netcdf4ObjectFilter implements CompareNetcdf2.ObjFilter {
-    @Override
-    public boolean attCheckOk(Variable v, Attribute att) {
-      // if (v != null && v.isMemberOfStructure()) return false;
-      String name = att.getShortName();
-
-      // added by cdm
-      if (name.equals(CDM.CHUNK_SIZES)) return false;
-      if (name.equals(CDM.FILL_VALUE)) return false;
-      if (name.equals("_lastModified")) return false;
-
-      // hidden by nc4
-      if (name.equals(Nc4.NETCDF4_DIMID)) return false;  // preserve the order of the dimensions
-      if (name.equals(Nc4.NETCDF4_COORDINATES)) return false;  // ??
-      if (name.equals(Nc4.NETCDF4_STRICT)) return false;
-
-      // not implemented yet
-      //if (att.getDataType().isEnum()) return false;
-
-      return true;
-    }
-
-    @Override
-    public boolean varDataTypeCheckOk(Variable v) {
-      if (v.getDataType() == DataType.CHAR) return false;    // temp workaround
-      if (v.getDataType() == DataType.STRING) return false;
-      return true;
-    }
-  }
 
 
 }

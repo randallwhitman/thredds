@@ -35,11 +35,11 @@ package ucar.nc2.stream;
 import ucar.ma2.*;
 import ucar.nc2.*;
 import ucar.nc2.constants.CDM;
-import ucar.nc2.iosp.IospHelper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.nio.ByteOrder;
 import java.util.zip.DeflaterOutputStream;
 
 /**
@@ -103,9 +103,10 @@ public class NcStreamWriter {
     if ((v.getDataType() != DataType.STRING) && (v.getDataType() != DataType.OPAQUE) && !v.isVariableLength())
       uncompressedLength *= v.getElementSize(); // nelems for vdata, else nbytes
 
+    ByteOrder bo = ByteOrder.nativeOrder(); // reader makes right
     long size = 0;
     size += writeBytes(out, NcStream.MAGIC_DATA); // magic
-    NcStreamProto.Data dataProto = NcStream.encodeDataProto(v, section, deflate, (int) uncompressedLength);
+    NcStreamProto.Data dataProto = NcStream.encodeDataProto(v, section, deflate, bo, (int) uncompressedLength);
     byte[] datab = dataProto.toByteArray();
     size += NcStream.writeVInt(out, datab.length); // dataProto len
     size += writeBytes(out, datab); // dataProto
@@ -118,19 +119,28 @@ public class NcStreamWriter {
       try {
         while (iter.hasNext()) {
           size += writeBytes(out, NcStream.MAGIC_VDATA); // magic
-          ArrayStructureBB abb = StructureDataDeep.copyToArrayBB(iter.next());
-          size += NcStream.encodeArrayStructure(abb, out);
+          StructureData sdata = iter.next();
+          ArrayStructure as = new ArrayStructureW(sdata);
+          size += NcStream.encodeArrayStructure(as, bo, out);
           count++;
         }
       } finally {
         iter.finish();
       }
       size += writeBytes(out, NcStream.MAGIC_VEND);
-      if (show) System.out.printf(" NcStreamWriter sent %d sdata bytes = %d%n", count, size);
+      if (show) System.out.printf(" NcStreamWriter sent %d seqData bytes = %d%n", count, size);
       return size;
     }
 
-    // regular arrays
+    if (v.getDataType() == DataType.STRUCTURE) {
+      ArrayStructure abb = (ArrayStructure) v.read();   // read all - LOOK break this up into chunks if needed
+       //coverity[FB.BC_UNCONFIRMED_CAST]
+      size += NcStream.encodeArrayStructure(abb, bo, out);
+     if (show) System.out.printf(" NcStreamWriter sent ArrayStructure bytes = %d%n", size);
+     return size;
+    }
+
+     // regular arrays
     if (deflate) {
       ByteArrayOutputStream bout = new ByteArrayOutputStream();
       DeflaterOutputStream dout = new DeflaterOutputStream(bout);
@@ -176,7 +186,6 @@ public class NcStreamWriter {
     if (show) System.out.printf(" data starts at= %d%n", size);
 
     for (Variable v : ncfile.getVariables()) {
-      Attribute chunkAtt = null; // v.findAttribute(CDM.CHUNK);
       Attribute compressAtt = v.findAttribute(CDM.COMPRESS);
       boolean deflate = (compressAtt != null) && compressAtt.isString() && compressAtt.getStringValue().equalsIgnoreCase(CDM.COMPRESS_DEFLATE);
 
@@ -184,9 +193,7 @@ public class NcStreamWriter {
       //if (vsize < sizeToCache) continue; // in the header;
       if (show) System.out.printf(" var %s len=%d starts at= %d%n", v.getFullName(), vsize, size);
 
-      if (chunkAtt != null) {
-        size += copyChunks(out, v, compressAtt.getStringValue(), deflate);
-      } else if (vsize > maxChunk) {
+      if (vsize > maxChunk) {
         size += copyChunks(out, v, maxChunk, deflate);
       } else {
         size += sendData(v, v.getShapeAsSection(), out, deflate);
@@ -217,32 +224,10 @@ public class NcStreamWriter {
     return size;
   }
 
-  private long copyChunks(OutputStream out, Variable oldVar, String chunk, boolean deflate) throws IOException {
-    /*long maxChunkElems = maxChunkSize / oldVar.getElementSize();
-    FileWriter.ChunkingIndex index = new FileWriter.ChunkingIndex(oldVar.getShape());
-    long size = 0;
-    while (index.currentElement() < index.getSize()) {
-      try {
-        int[] chunkOrigin = index.getCurrentCounter();
-        int[] chunkShape = index.computeChunkShape(maxChunkElems);
-        size += sendData(oldVar, new Section(chunkOrigin, chunkShape), out, deflate);
-        index.setCurrentCounter(index.currentElement() + (int) Index.computeSize(chunkShape));
-
-      } catch (InvalidRangeException e) {
-        e.printStackTrace();
-        throw new IOException(e.getMessage());
-      }
-    }
-    return size; */
-    return 0;
-  }
-
-
   static public void main2(String args[]) throws InvalidRangeException {
     int[] totalShape = new int[] {1, 40, 530, 240};
     int[] chunkShape = new int[] {1, 1, 530, 240};
     FileWriter2.ChunkingIndex index = new FileWriter2.ChunkingIndex(totalShape);
-    long size = 0;
     while (index.currentElement() < index.getSize()) {
       int[] chunkOrigin = index.getCurrentCounter();
       System.out.printf(" %s%n", new Section(chunkOrigin, chunkShape));
@@ -256,7 +241,6 @@ public class NcStreamWriter {
     int[] totalShape = new int[] {1, 40, 530, 240};
     //int[] chunkShape = new int[] {1, 1, 530, 240};
     FileWriter2.ChunkingIndex index = new FileWriter2.ChunkingIndex(totalShape);
-    long size = 0;
     while (index.currentElement() < index.getSize()) {
       int[] chunkOrigin = index.getCurrentCounter();
       int[] chunkShape = index.computeChunkShape(maxChunkElems);

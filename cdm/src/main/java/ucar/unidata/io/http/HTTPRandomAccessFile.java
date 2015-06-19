@@ -53,7 +53,8 @@ import java.nio.ByteBuffer;
  */
 
 public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
-  static public int defaultHTTPBufferSize = 20000;
+  static public final int defaultHTTPBufferSize = 20 * 1000;       // 20K
+  static public final int maxHTTPBufferSize = 10 * 1000 * 1000;     // 10 M
   static private final boolean debug = false, debugDetails = false;
 
   ///////////////////////////////////////////////////////////////////////////////////
@@ -80,9 +81,8 @@ public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
 
     boolean needtest = true;
 
-    HTTPMethod method = null;
-    try {
-      method = HTTPFactory.Head(session);
+    try (
+      HTTPMethod method = HTTPFactory.Head(session)) {
 
       doConnect(method);
 
@@ -104,26 +104,29 @@ public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
 
       try {
         total_length = Long.parseLong(head.getValue());
+        /* Some HTTP server report 0 bytes length. 
+         * Do the Range bytes test if the server is reporting 0 bytes length*/
+        if (total_length==0) needtest = true;
       } catch (NumberFormatException e) {
         throw new IOException("Server has malformed Content-Length header");
       }
 
-    } finally {
-      if (method != null) method.close();
     }
 
     if (needtest && !rangeOk(url))
       throw new IOException("Server does not support byte Ranges");
 
+    if (total_length > 0) {
+      // this means that we will read the file in one gulp then deal with it in memory
+      int useBuffer = (int) Math.min(total_length, maxHTTPBufferSize); // entire file size if possible
+      useBuffer = Math.max(useBuffer, defaultHTTPBufferSize); // minimum buffer
+      setBufferSize(useBuffer);
+    }
+
     if (debugLeaks) openFiles.add(location);
   }
 
   public void close() throws IOException {
-    if (fileCache != null) {
-      fileCache.release(this);
-      return;
-    }
-
     if (debugLeaks)
       openFiles.remove(location);
 
@@ -133,26 +136,24 @@ public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
     }
   }
 
-  private boolean rangeOk(String url) {
-    HTTPMethod method = null;
+  private boolean rangeOk(String url)
+  {
     try {
-      method = HTTPFactory.Get(session, url);
-      method.setRequestHeader("Range", "bytes=" + 0 + "-" + 1);
-      doConnect(method);
+      try (HTTPMethod method = HTTPFactory.Get(session, url)) {
+        method.setRequestHeader("Range", "bytes=" + 0 + "-" + 0);
+        doConnect(method);
 
-      int code = method.getStatusCode();
-      if (code != 206)
-        throw new IOException("Server does not support Range requests, code= " + code);
-
-      // clear stream
-      method.close();
-      return true;
-
+        int code = method.getStatusCode();
+        if(code != 206)
+          throw new IOException("Server does not support Range requests, code= " + code);
+        Header head = method.getResponseHeader("Content-Range");
+        total_length = Long.parseLong(head.getValue().substring(head.getValue().lastIndexOf("/") + 1));
+        // clear stream
+        method.close();
+        return true;
+      }
     } catch (IOException e) {
       return false;
-
-    } finally {
-      if (method != null) method.close();
     }
   }
 
@@ -201,9 +202,7 @@ public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
 
     if (debug) System.out.println(" HTTPRandomAccessFile bytes=" + pos + "-" + end + ": ");
 
-    HTTPMethod method = null;
-    try {
-      method = HTTPFactory.Get(session);
+    try (HTTPMethod method = HTTPFactory.Get(session)) {
       method.setFollowRedirects(true);
       method.setRequestHeader("Range", "bytes=" + pos + "-" + end);
       doConnect(method);
@@ -223,8 +222,6 @@ public class HTTPRandomAccessFile extends ucar.unidata.io.RandomAccessFile {
       readLen = copy(is, buff, offset, readLen);
       return readLen;
 
-    } finally {
-      if (method != null) method.close();
     }
   }
 

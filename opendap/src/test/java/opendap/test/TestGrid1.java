@@ -35,10 +35,7 @@ package opendap.test;
 import ucar.nc2.dataset.NetcdfDataset;
 import ucar.nc2.util.UnitTestCommon;
 import ucar.unidata.test.util.TestDir;
-
-import java.io.*;
-
-import static junit.framework.Assert.assertEquals;
+import ucar.unidata.test.util.ThreddsServer;
 
 /**
  * Test nc2 dods in the JUnit framework.
@@ -64,7 +61,7 @@ public class TestGrid1 extends UnitTestCommon
     static final protected String URLPATH_REMOTE =
             "/thredds/dodsC/testdods/"+DATASET;
     static final protected String URLPATH_LOCAL =
-            "/thredds/dodsC/testAll/"+DATASET;
+            "/thredds/dodsC/testdods/"+DATASET;
 
     protected String testserver = null;
 
@@ -77,14 +74,16 @@ public class TestGrid1 extends UnitTestCommon
     public void testGrid1()
             throws Exception
     {
+        ThreddsServer.REMOTETEST.assumeIsAvailable();
+
         System.out.println("TestGrid1:");
         String url = null;
         boolean pass = true;
         NetcdfDataset ncfile = null;
-        if(TestDir.remoteTestServer.startsWith("localhost"))
-            url = "dods://" + TestDir.remoteTestServer + URLPATH_LOCAL;
+        if(TestDir.threddsTestServer.startsWith("localhost"))
+            url = "dods://" + TestDir.threddsTestServer + URLPATH_LOCAL;
         else
-            url = "dods://" + TestDir.remoteTestServer + URLPATH_REMOTE;
+            url = "dods://" + TestDir.threddsTestServer + URLPATH_REMOTE;
 
         try {
             ncfile = NetcdfDataset.openDataset(url);

@@ -91,22 +91,21 @@ public class NcepMnemonic {
     HashMap<String, String> mnseq = new HashMap<>();
 
     try {
-      BufferedReader dataIS = new BufferedReader(new InputStreamReader(ios,
-              CDM.utf8Charset));
+      BufferedReader dataIS = new BufferedReader(new InputStreamReader(ios, CDM.utf8Charset));
 
       // read  mnemonic table
       Matcher m;
       // read header info and disregard
       while (true) {
         String line = dataIS.readLine();
-        //if (line == null) break;
+        if (line == null) throw new RuntimeException("Bad NCEP mnemonic BUFR table ");
         if (line.contains("MNEMONIC")) break;
       }
       // read mnemonic, number, and description
       //| HEADR    | 362001 | TABLE D ENTRY - PROFILE COORDINATES                      |
       while (true) {
         String line = dataIS.readLine();
-        //if (line == null) break;
+        if (line == null) break;
         if (line.contains("MNEMONIC")) break;
         if (line.contains("----")) continue;
         if (line.startsWith("*")) continue;
@@ -133,7 +132,7 @@ public class NcepMnemonic {
       //| ETACLS1  | HEADR {PROFILE} SURF FLUX HYDR D10M {SLYR} XTRA                   |
       while (true) {
         String line = dataIS.readLine();
-        //if (line == null) break;
+        if (line == null) break;
         if (line.contains("MNEMONIC")) break;
         if (line.contains("----")) continue;
         if (line.startsWith("|       ")) continue;

@@ -33,16 +33,16 @@
  */
 package ucar.nc2.util;
 
+import ucar.nc2.constants.CDM;
 import ucar.nc2.dataset.*;
 import ucar.nc2.*;
 import ucar.ma2.*;
+import ucar.nc2.iosp.netcdf4.Nc4;
 
+import java.io.*;
 import java.util.List;
 import java.util.Formatter;
 import java.util.ArrayList;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.ByteArrayOutputStream;
 
 /**
  * Compare two NetcdfFile.
@@ -51,6 +51,40 @@ import java.io.ByteArrayOutputStream;
  * @author john
  */
 public class CompareNetcdf2 {
+
+  public interface ObjFilter {
+    boolean attCheckOk(Variable v, Attribute att);
+    boolean varDataTypeCheckOk(Variable v);
+  }
+
+  public static class Netcdf4ObjectFilter implements ObjFilter {
+    @Override
+    public boolean attCheckOk(Variable v, Attribute att) {
+      // if (v != null && v.isMemberOfStructure()) return false;
+      String name = att.getShortName();
+
+      // added by cdm
+      if (name.equals(CDM.CHUNK_SIZES)) return false;
+      if (name.equals(CDM.FILL_VALUE)) return false;
+      if (name.equals("_lastModified")) return false;
+
+      // hidden by nc4
+      if (name.equals(Nc4.NETCDF4_DIMID)) return false;  // preserve the order of the dimensions
+      if (name.equals(Nc4.NETCDF4_COORDINATES)) return false;  // ??
+      if (name.equals(Nc4.NETCDF4_STRICT)) return false;
+
+      // not implemented yet
+      //if (att.getDataType().isEnum()) return false;
+
+      return true;
+    }
+
+    @Override
+    public boolean varDataTypeCheckOk(Variable v) {
+      if (v.getDataType() == DataType.CHAR) return false;    // temp workaround
+      return v.getDataType() != DataType.STRING;
+    }
+  }
 
   static public boolean compareFiles(NetcdfFile org, NetcdfFile copy, Formatter f) {
     return compareFiles(org, copy, f, false, false, false);
@@ -61,15 +95,13 @@ public class CompareNetcdf2 {
     return tc.compare(org, copy);
   }
 
-  static public interface ObjFilter {
-    boolean attCheckOk(Variable v, Attribute att);
-    boolean varDataTypeCheckOk(Variable v);
-  }
+
 
   static public boolean compareLists(List org, List copy, Formatter f) {
-    return checkContains("org", org, copy, f) && checkContains("copy", copy, org, f);
+    boolean ok1 = checkContains("first", org, copy, f);
+    boolean ok2 = checkContains("second", copy, org, f);
+    return ok1 && ok2;
   }
-
 
   static private boolean checkContains(String what, List container, List wantList, Formatter f) {
     boolean ok = true;
@@ -178,7 +210,7 @@ public class CompareNetcdf2 {
     return ok;
   }
 
-  private boolean compare(List<Dimension> dims1, List<Dimension> dims2) {
+  /* private boolean compare(List<Dimension> dims1, List<Dimension> dims2) {
     if (dims1.size() != dims2.size()) return false;
     for (int i = 0; i < dims1.size(); i++) {
       Dimension dim1 = dims1.get(i);
@@ -187,7 +219,7 @@ public class CompareNetcdf2 {
       if (dim1.getLength() != dim2.getLength()) return false;
     }
     return true;
-  }
+  }  */
 
   private boolean compareGroups(Group org, Group copy, ObjFilter filter) {
     if (showCompare) f.format("compare Group %s to %s %n", org.getShortName(), copy.getShortName());
@@ -277,9 +309,9 @@ public class CompareNetcdf2 {
         compareVariableData(org, copy, showCompare, justOne);
 
       } catch (IOException e) {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(10000);
-        e.printStackTrace(new PrintStream(bos));
-        f.format("%s", bos.toString());
+        StringWriter sw = new StringWriter(5000);
+        e.printStackTrace(new PrintWriter(sw));
+        f.format("%s", sw.toString());
       }
     }
 
@@ -325,9 +357,8 @@ public class CompareNetcdf2 {
     if (showCompare)
       f.format("compare CoordinateSystem '%s' to '%s' %n", cs1.getName(), cs2.getName());
 
-    boolean ok = true;
     List matchAxes = new ArrayList();
-    ok &= checkAll(cs1.getName(), cs1.getCoordinateAxes(), cs2.getCoordinateAxes(), matchAxes);
+    boolean ok = checkAll(cs1.getName(), cs1.getCoordinateAxes(), cs2.getCoordinateAxes(), matchAxes);
     for (int i = 0; i < matchAxes.size(); i += 2) {
       CoordinateAxis orgCs = (CoordinateAxis) matchAxes.get(i);
       CoordinateAxis copyCs = (CoordinateAxis) matchAxes.get(i + 1);
@@ -413,7 +444,6 @@ public class CompareNetcdf2 {
       if (enum1 == null) {
         f.format("  ** Enum %s not in file1 %n", enum2.getShortName());
         ok = false;
-        continue;
       }
     }
     return ok;
